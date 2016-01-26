@@ -30,6 +30,7 @@ namespace LAMMPS_NS {
 class Bisection : protected Pointers {
 private:
 	FILE *fp;
+	int inputSetFlag;
 	void BisectionFromMD(bigint, char*);
 	int ConvertToChar(char **, std::string);
 	void InitializeMinimize();

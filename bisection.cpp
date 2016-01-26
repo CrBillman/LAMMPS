@@ -38,9 +38,10 @@ Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp) {}
 
 void Bisection::command(int narg, char **arg){
 	//fprintf(screen, "I'm here!");
-	if(narg<3) error->all(FLERR,"Illegal run command");
+	if(narg<3) error->all(FLERR,"Bisection Method -- Illegal run command");
 
 	bigint nsteps_input = force->bnumeric(FLERR,arg[0]);
+	inputSetFlag = 0;
 	//fprintf(screen, "nsteps_input is " BIGINT_FORMAT, nsteps_input);
 	//Sets up minimization arguments.
 	/*
@@ -60,10 +61,13 @@ void Bisection::command(int narg, char **arg){
 		    if (iarg+1 > narg) error->all(FLERR,"Illegal run command");
 			char* bisFilename = arg[iarg+1];
 			BisectionFromMD(nsteps_input, bisFilename);
+			inputSetFlag = 1;
 			iarg++;
 		}
 		iarg++;
 	}
+
+	if(inputSetFlag==0) error->all(FLERR,"Bisection Method -- No input method selected");
 
 	return;
 }
@@ -158,8 +162,8 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			extraMin++;
 			higherStep = intCurrStep;
 		}
-		//fprintf(fp, "UPDATE (" BIGINT_FORMAT ", %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", iSteps,
-				//log2(nsteps), lowerStep, higherStep);
+		fprintf(fp, "UPDATE (" BIGINT_FORMAT ", %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", iSteps,
+				log2(nsteps), lowerStep, higherStep);
 		iSteps++;
 		if(higherStep-lowerStep<=1) break;
 	}
