@@ -7,6 +7,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <cstring>
+#include <sstream>
 #include <math.h>
 #include "run.h"
 #include "domain.h"
@@ -232,7 +234,10 @@ double Bisection::CallMinimize()
 
 int Bisection::UpdateDumpArgs(bigint currStep, char *charCurrStep)
 {
-	std::string strCurrStep = std::to_string((long long)currStep);
+	//std::string strCurrStep = std::to_string((long long)currStep);
+	std::ostringstream oss;
+	oss << (long long)currStep;
+	std::string strCurrStep = oss.str();
 	std::strcpy(charCurrStep,strCurrStep.c_str());
 	return currStep;
 }
