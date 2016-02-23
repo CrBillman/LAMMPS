@@ -32,6 +32,7 @@
 #include "pair_hybrid.h"
 #include "pair_hybrid_overlay.h"
 #include "pair_lcbop.h"
+#include "pair_lj246.h"
 #include "pair_lj96_cut.h"
 #include "pair_lj_charmm_coul_charmm.h"
 #include "pair_lj_charmm_coul_charmm_implicit.h"

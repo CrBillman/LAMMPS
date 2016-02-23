@@ -39,19 +39,13 @@ Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp) {}
 /* ---------------------------------------------------------------------- */
 
 void Bisection::command(int narg, char **arg){
-	//fprintf(screen, "I'm here!");
+	fprintf(logfile, "I'm here!");
+	
 	if(narg<3) error->all(FLERR,"Bisection Method -- Illegal run command");
 
 	bigint nsteps_input = force->bnumeric(FLERR,arg[0]);
 	inputSetFlag = 0;
-	//fprintf(screen, "nsteps_input is " BIGINT_FORMAT, nsteps_input);
-	//Sets up minimization arguments.
-	/*
-	update->etol = force->numeric(FLERR,arg[1]);
-	update->ftol = force->numeric(FLERR,arg[2]);
-	update->nsteps = force->inumeric(FLERR,arg[3]);
-	update->max_eval = force->inumeric(FLERR,arg[4]);
-	*/
+	
 	InitializeMinimize();
 
 
@@ -70,15 +64,16 @@ void Bisection::command(int narg, char **arg){
 	}
 
 	if(inputSetFlag==0) error->all(FLERR,"Bisection Method -- No input method selected");
-
+	
 	return;
+
 }
 
 void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 
 	//Initialize all bisection variables
 	double epsE = 0.01;
-	double epsT = 0.01;
+	double epsT = 0.02;
 	bigint intCurrStep = 0;
 	bigint lowerStep=0, higherStep=nsteps;
 	char *charCurrStep = new char[50];
@@ -87,16 +82,17 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	double minEnergy1;
 	double minEnergy2;
 	double minEnergy3;
+	double eDiff, distDiff;
 	double** atoms1;
 	double** atoms2;
 	double** tAtoms;
-
+	
 	//Need to prepare input commands for the read_dump command.  The arguments to the command need to be organized in
 	//char **, which contains the string "[filename] [step] x y [z] replace yes".  That string is created here,
 	//and then passed to the ConvertToChar function, which creates parses the string and converts it to char **.
 	char** readInput;
 	readInput = NULL;
-	readInput = (char **) memory->srealloc(readInput,5*sizeof(char *),"bisection:RDargs");
+	readInput = (char **) memory->srealloc(readInput,6*sizeof(char *),"bisection:RDargs");
 	std::string strInput = bisFilename;
 	if(domain->dimension==2) {
 		strInput = strInput + " 0 x y replace yes";
@@ -104,20 +100,26 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	else{
 		strInput = strInput + " 0 x y z replace yes";
 	}
+//ConvertToChar is causing a segmentation fault
 	int nInput = ConvertToChar(readInput, strInput);
 
 	//Creates a ReadDump class, and then has it read the appropriate timestep, using the parsed input string.
-	ReadDump* bisRead = new ReadDump(lmp);
-	bisRead->command(nInput, readInput);
+	ReadDump *bisRead = new ReadDump(lmp);
 
+
+	bisRead->command(nInput, readInput);
+	fprintf(screen,"The position of the 613 atom in atoms is %f\n", atoms2[613][0]);
 	//Minimizes the atomic configuration and then stores the energy in minEnergy1.
 	minEnergy1 = CallMinimize();
 	atoms1 = atom->x;
 	readInput[1] = &charCurrStep[0];
 	intCurrStep = UpdateDumpArgs(nsteps, charCurrStep);
 	bisRead->command(nInput, readInput);
+	fprintf(screen,"The position of the 613 atom in atoms is %f\n", atoms2[613][0]);
 	minEnergy2 = CallMinimize();
 	atoms2 = atom->x;
+	fprintf(screen,"The position of the 613 atom in atoms2 is %f\n", atoms2[613][0]);
+	fprintf(screen,"The position of the 613 atom in atoms1 is %f\n", atoms1[613][0]);
 
 	if(((minEnergy2-minEnergy1)<epsE)&&(ComputeDifference(atoms1,atoms2)<epsT))
 	{
@@ -140,32 +142,38 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		intCurrStep = UpdateDumpArgs((higherStep-lowerStep)/2+lowerStep,charCurrStep);
 		minEnergy3 = CallMinimize();
 		tAtoms = atom->x;
+		eDiff = minEnergy3-minEnergy1;
 		if((minEnergy3-minEnergy1)<epsE)
 		{
-			if(ComputeDifference(atoms1,tAtoms)<epsT)
+			distDiff = ComputeDifference(atoms1,tAtoms); 
+			if(distDiff<epsT)
 			{
 				lowerStep = intCurrStep;
 				//fprintf(fp, "***Relaxes to minimum 1 at index " BIGINT_FORMAT ", with difference %f\n",
 						//intCurrStep, ComputeDifference(atoms1,tAtoms));
 			}
 		}
-		else if((minEnergy3-minEnergy1)<epsE)
-		{
-			if(ComputeDifference(atoms2,tAtoms)<epsT)
+		else{
+			eDiff = minEnergy3-minEnergy2;
+			if(eDiff<epsE)
 			{
+				distDiff = ComputeDifference(atoms2,tAtoms);
+				if(distDiff<epsT)
+				{
+					higherStep = intCurrStep;
+					//fprintf(fp, "***Relaxes to minimum 2 at index " BIGINT_FORMAT ", with difference %f\n",
+							//intCurrStep, ComputeDifference(atoms2,tAtoms));
+				}
+			}
+			else{
+				//fprintf(fp, "***New minimum found at index " BIGINT_FORMAT ", with energy %f\n", intCurrStep, minEnergy3);
+				extraList[extraMin] = intCurrStep;
+				extraMin++;
 				higherStep = intCurrStep;
-				//fprintf(fp, "***Relaxes to minimum 2 at index " BIGINT_FORMAT ", with difference %f\n",
-						//intCurrStep, ComputeDifference(atoms2,tAtoms));
 			}
 		}
-		else{
-			//fprintf(fp, "***New minimum found at index " BIGINT_FORMAT ", with energy %f\n", intCurrStep, minEnergy3);
-			extraList[extraMin] = intCurrStep;
-			extraMin++;
-			higherStep = intCurrStep;
-		}
-		fprintf(fp, "UPDATE (" BIGINT_FORMAT ", %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", iSteps,
-				log2(nsteps), lowerStep, higherStep);
+		fprintf(fp, "UPDATE (%f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", eDiff,
+				distDiff, lowerStep, higherStep);
 		iSteps++;
 		if(higherStep-lowerStep<=1) break;
 	}
@@ -174,8 +182,8 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 
 
 	//Deletes readInput, to prevent memory leaks.
-	delete readInput;
-
+	delete bisRead;
+	memory->sfree(readInput);
 	return;
 }
 
@@ -189,7 +197,9 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 	char *start = &charInput[0];
 	char *stop;
 	charArray[0] = start;
+//Problem in While Loop
 	while(1){
+		fprintf(screen,"%s\n",charArray[nArgs]);
 		nArgs++;
 		stop = &start[strcspn(start," ")];
 		if(*stop=='\0') break;
@@ -197,6 +207,7 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 		start = stop+1;
 		charArray[nArgs] = start;
 	}
+
 	return nArgs;
 }
 
@@ -247,17 +258,24 @@ int Bisection::UpdateDumpArgs(bigint currStep, char *charCurrStep)
 //and then taking the dot product between the vectors.
 double Bisection::ComputeDifference(double** x1,double** x2)
 {
-	double DiffSq=0.0;
+	double DiffSq;
+	double TotDiff = 0.0;
 	double EnergyWeighting = 100;
 	double* m = atom->mass;
 	int* type = atom->type;
+	double totMass = 0.0;
 	for(int i=0;i<atom->natoms;i++)
 	{
+		DiffSq = 0.0;
 		for(int j=0;j<domain->dimension;j++)
 		{
-			DiffSq = DiffSq + m[type[i]]*m[type[i]]*(x1[i][j]-x2[i][j])*(x1[i][j]-x2[i][j]);
+			totMass = totMass + m[type[i]];
+			DiffSq = DiffSq + (x1[i][j]-x2[i][j])*(x1[i][j]-x2[i][j]);
 		}
+		TotDiff = TotDiff + m[type[i]]*DiffSq;
+		//fprintf(screen, "The squared difference in position for atom %f, with mass %f, is %f\n",i, m[type[i]], DiffSq);
 	}
+	DiffSq = DiffSq/totMass;
 	//fprintf(screen, "The difference is %f \n",DiffSq);
 	return sqrt(DiffSq);
 }
