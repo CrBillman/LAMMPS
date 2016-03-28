@@ -31,6 +31,7 @@ class Bisection : protected Pointers {
 private:
 	FILE *fp;
 	int inputSetFlag;
+	double epsT;
 	void BisectionFromMD(bigint, char*);
 	int ConvertToChar(char **, std::string);
 	void InitializeMinimize();

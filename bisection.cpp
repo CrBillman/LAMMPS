@@ -40,11 +40,11 @@ Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp) {}
 /* ---------------------------------------------------------------------- */
 
 void Bisection::command(int narg, char **arg){
-	fprintf(logfile, "I'm here!");
 	
 	if(narg<3) error->all(FLERR,"Bisection Method -- Illegal run command");
 
 	bigint nsteps_input = force->bnumeric(FLERR,arg[0]);
+	epsT = force->numeric(FLERR,arg[1]);
 	inputSetFlag = 0;
 	
 	//InitializeMinimize();
@@ -52,7 +52,7 @@ void Bisection::command(int narg, char **arg){
 
 	int inflag = 0;
 
-	int iarg=1;
+	int iarg=2;
 	while(iarg<narg){
 		if(strcmp(arg[iarg],"FMD") == 0){
 		    if (iarg+1 > narg) error->all(FLERR,"Illegal run command");
@@ -73,7 +73,7 @@ void Bisection::command(int narg, char **arg){
 void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 
 	//Initialize all bisection variables
-	double epsT = 0.02;
+	//double epsT = 0.02;
 	bigint intCurrStep = 0;
 	bigint lowerStep=0, higherStep=nsteps;
 	char *charCurrStep = new char[50];
@@ -90,10 +90,9 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
         int me;
         MPI_Comm_rank(world,&me);
 
-	if(me==0)
-	{
-		OpenTLS();
-	}
+	if(me==0) OpenTLS();
+
+	if(me==0) fprintf(logfile, "epsT is %f",epsT);
 
 	//Need to prepare input commands for the read_dump command.  The arguments to the command need to be organized in
 	//char **, which contains the string "[filename] [step] x y [z] replace yes".  That string is created here,
@@ -113,21 +112,20 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	int nInput = ConvertToChar(readInput, strInput);
 
 	//Creates a ReadDump class, and then has it read the appropriate timestep, using the parsed input string.
+	
 	ReadDump *bisRead = new ReadDump(lmp);
 	
 //Good to here
 	bisRead->command(nInput, readInput);
 	//Minimizes the atomic configuration and then stores the energy in lEnergyMin.
+	
 	lEnergyMin = CallMinimize();
-	//lAtoms = InitAtomArray("bisection:lAtoms");
+
 	CopyAtoms(lAtoms,atomPtr);
-	//int asize = (atom->natoms)*sizeof(double*) + ((atom->natoms)*(domain->dimension)*sizeof(double));
-	//std::memcpy(lAtoms,atomPtr,asize);
-	//lAtoms = atom->x;
 	readInput[1] = &charCurrStep[0];
 	intCurrStep = UpdateDumpArgs(nsteps, charCurrStep);
 	bisRead->command(nInput, readInput);
-	//fprintf(screen,"The position of the 613 atom in atoms is %f\n", lAtoms[613][0]);
+
 	hEnergyMin = CallMinimize();
 	CopyAtoms(hAtoms,atomPtr);
 
@@ -181,28 +179,22 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			}
 		}
 		eDiff = fabs(hEnergyMin-lEnergyMin);
-		if(me==0)
-		{
-			fprintf(fp, "UPDATE (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
+		if(me==0)  fprintf(fp, "UPDATE (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
 					hEnergyMin, eDiff, distDiff, lowerStep, higherStep);
-		}
 		iSteps++;
 		if(higherStep-lowerStep<=1) break;
 	}
 
-	if(me==0)
-	{
-		WriteTLS(intCurrStep,lAtoms,hAtoms,lEnergyMin,hEnergyMin);
-	}
+	if(me==0) WriteTLS(intCurrStep,lAtoms,hAtoms,lEnergyMin,hEnergyMin);
 
 	//Deletes readInput and atom arrays, to prevent memory leaks.
+	
 	delete bisRead;
 	memory->sfree(readInput);
-
 	DeleteAtomArray(lAtoms);
 	DeleteAtomArray(hAtoms);
 	DeleteAtomArray(tAtoms);	
-	fclose(fp);
+	if(me==0) fclose(fp);
 
 	return;
 }
@@ -217,9 +209,7 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 	char *start = &charInput[0];
 	char *stop;
 	charArray[0] = start;
-//Problem in While Loop
 	while(1){
-		fprintf(screen,"%s\n",charArray[nArgs]);
 		nArgs++;
 		stop = &start[strcspn(start," ")];
 		if(*stop=='\0') break;
@@ -266,11 +256,8 @@ void Bisection::TestMinimize(bigint nsteps, ReadDump *bisRead, int nInput, char 
 		dummy = UpdateDumpArgs(i,readInput[1]);
 		bisRead->command(nInput, readInput);
 		tEmin = CallMinimize();
-		if(me==0)
-		{
-			fprintf(fp, BIGINT_FORMAT "\t%f \n",
-				i, tEmin);
-		}
+		if(me==0)  fprintf(fp, BIGINT_FORMAT "\t%f \n",
+			i, tEmin);
 	}
 }
 
@@ -329,6 +316,8 @@ void Bisection::TestComputeDifference()
 	double* m = atom->mass;
 	int* type = atom->type;
 	double MassTot = 0.0;
+	int me;
+        MPI_Comm_rank(world,&me);
 
 	//First test sets the position of every atom in Atoms1 to {0,0,0} and Atoms2 to {1,1,1}.  If the difference is being calculated correctly, Diff should be sqrt(3).
 	for(int i=0;i<atom->natoms;i++)
@@ -343,11 +332,11 @@ void Bisection::TestComputeDifference()
 	Diff = ComputeDifference(Atoms1, Atoms2);
 	if(fabs(sqrt(3)-Diff)<1E-3)
 	{
-		fprintf(screen, "ComputeDifference passes test 1.\n");
+		if(me==0) fprintf(screen, "ComputeDifference passes test 1.\n");
 	}
 	else
 	{
-		fprintf(screen, "Computedifference fails test 1.  Expected Diff==%f, but got %f.\n",sqrt(3), Diff);
+		if(me==0) fprintf(screen, "Computedifference fails test 1.  Expected Diff==%f, but got %f.\n",sqrt(3), Diff);
 	}
 	
 	//Second test sets the positions in both Atoms arrays to {0,0,0}, except a single entry in Atoms2, which is set to {1,0,0}.  This is to test the mass weighting.
@@ -364,11 +353,11 @@ void Bisection::TestComputeDifference()
         Diff = ComputeDifference(Atoms1, Atoms2);
         if(fabs(sqrt(m[type[0]]/MassTot)-Diff)<1E-3)
         {
-                fprintf(screen, "ComputeDifference passes test 2.\n");
+                if(me==0) fprintf(screen, "ComputeDifference passes test 2.\n");
         }
         else
         {
-                fprintf(screen, "Computedifference fails test 2.  Expected Diff==%f, but got %f.\n", sqrt(m[type[0]]/MassTot), Diff);
+                if(me==0) fprintf(screen, "Computedifference fails test 2.  Expected Diff==%f, but got %f.\n", sqrt(m[type[0]]/MassTot), Diff);
         }
 
 	//Third test sets the positions to be at the edges of the unit cell.  This should give 0 displacement if the edges are treated correctly.
@@ -381,11 +370,11 @@ void Bisection::TestComputeDifference()
         Diff = ComputeDifference(Atoms1, Atoms2);
         if(fabs(Diff)<1E-3)
         {
-                fprintf(screen, "ComputeDifference passes test 3.\n");
+                if(me==0) fprintf(screen, "ComputeDifference passes test 3.\n");
         }
         else
         {
-                fprintf(screen, "Computedifference fails test 3.  Expected Diff==%f, but got %f.\n", 0.0, Diff);
+                if(me==0) fprintf(screen, "Computedifference fails test 3.  Expected Diff==%f, but got %f.\n", 0.0, Diff);
         }
 
 	DeleteAtomArray(Atoms1);
