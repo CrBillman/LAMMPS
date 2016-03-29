@@ -30,14 +30,20 @@ namespace LAMMPS_NS {
 class Bisection : protected Pointers {
 private:
 	FILE *fp;
+	int inputSetFlag;
+	double epsT;
 	void BisectionFromMD(bigint, char*);
 	int ConvertToChar(char **, std::string);
-	void InitializeMinimize();
 	double CallMinimize();
 	int UpdateDumpArgs(bigint, char*);
 	double ComputeDifference(double**,double**);
 	void WriteTLS(bigint, double**, double**, double, double);
 	void OpenTLS();
+	void CopyAtoms(double**, double**);
+	double** InitAtomArray();
+	void DeleteAtomArray(double**);
+	void TestMinimize(bigint, ReadDump*, int, char**);
+	void TestComputeDifference();
 public:
 	Bisection(class LAMMPS *);
 	void command(int, char **);
