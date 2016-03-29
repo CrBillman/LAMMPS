@@ -47,7 +47,6 @@ void Bisection::command(int narg, char **arg){
 	epsT = force->numeric(FLERR,arg[1]);
 	inputSetFlag = 0;
 	
-	//InitializeMinimize();
 
 
 	int inflag = 0;
@@ -134,9 +133,15 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//TestMinimize(nsteps, bisRead, nInput, readInput);
 	if(me==0)
 	{
+		/*fprintf(fp,"The lattice is:\n");
+		for(int i=0;i<3;i++)
+		{
+			fprintf(fp,"%f\t", domain->prd[i]);
+		}*/
+		fprintf(fp,"\n");
 		if(ComputeDifference(lAtoms,hAtoms)<epsT)
 		{
-			fprintf(fp,"End-points for bisection have same minimum.  Bisection may fail.");
+			fprintf(fp,"End-points for bisection have same minimum.  Bisection may fail.\n");
 		}
 	}
 	//fprintf(screen,"The readInput[1] value is %s and the x position of the first atom is %f \n", readInput[1],lAtoms[0][0]);
@@ -221,16 +226,6 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 	return nArgs;
 }
 
-void Bisection::InitializeMinimize()
-{
-	update->etol = 1.0e-5;
-	update->ftol = 1.0e-6;
-	update->nsteps = 100;
-	update->max_eval = 1000;
-	update->whichflag = 2;
-	update->beginstep = update->firststep = update->ntimestep;
-	update->endstep = update->laststep = update->firststep + update->nsteps;
-}
 
 double Bisection::CallMinimize()
 {

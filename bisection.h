@@ -34,7 +34,6 @@ private:
 	double epsT;
 	void BisectionFromMD(bigint, char*);
 	int ConvertToChar(char **, std::string);
-	void InitializeMinimize();
 	double CallMinimize();
 	int UpdateDumpArgs(bigint, char*);
 	double ComputeDifference(double**,double**);

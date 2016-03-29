@@ -589,7 +589,6 @@ int ReadDump::fields_and_keywords(int narg, char **arg)
   if (iarg < narg) fieldtype[nfield++] = TYPE;
 
   // parse fields
-  fprintf(logfile, "Got here!");
   iarg = 0;
   while (iarg < narg) {
     int type = whichtype(arg[iarg]);
