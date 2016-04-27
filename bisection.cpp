@@ -28,6 +28,10 @@
 #include "min.h"
 #include "minimize.h"
 #include "atom.h"
+#include "fix.h"
+#include "fix_store.h"
+#include "dump.h"
+#include <iostream>
 
 using namespace LAMMPS_NS;
 
@@ -35,13 +39,16 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp) {}
+Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp)
+{
+	nAtomArrays = 0;
+}
 
 /* ---------------------------------------------------------------------- */
 
 void Bisection::command(int narg, char **arg){
 	
-	if(narg<3) error->all(FLERR,"Bisection Method -- Illegal run command");
+	if(narg<4) error->all(FLERR,"Bisection Method -- Illegal run command");
 
 	bigint nsteps_input = force->bnumeric(FLERR,arg[0]);
 	epsT = force->numeric(FLERR,arg[1]);
@@ -74,6 +81,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//Initialize all bisection variables
 	//double epsT = 0.02;
 	bigint intCurrStep = 0;
+	bigint maxSteps = log2(nsteps)+5;
 	bigint lowerStep=0, higherStep=nsteps;
 	char *charCurrStep = new char[50];
 	int minIndex1;
@@ -81,8 +89,9 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	double lEnergyMin;
 	double hEnergyMin;
 	double tEnergyMin;
-	double eDiff, distDiff;
-	double** atomPtr = atom->x;
+	double eDiff;
+	double lDistDiff;
+	double hDistDiff;
 	double** lAtoms = InitAtomArray();
 	double** hAtoms = InitAtomArray();
 	double** tAtoms = InitAtomArray();
@@ -91,7 +100,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 
 	if(me==0) OpenTLS();
 
-	if(me==0) fprintf(logfile, "epsT is %f",epsT);
+	if(me==0) fprintf(logfile, "epsT is %f\n",epsT);
 
 	//Need to prepare input commands for the read_dump command.  The arguments to the command need to be organized in
 	//char **, which contains the string "[filename] [step] x y [z] replace yes".  That string is created here,
@@ -120,77 +129,71 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	
 	lEnergyMin = CallMinimize();
 
-	CopyAtoms(lAtoms,atomPtr);
+	UpdateAtoms(tAtoms);
+	CopyAtoms(lAtoms,tAtoms);
 	readInput[1] = &charCurrStep[0];
 	intCurrStep = UpdateDumpArgs(nsteps, charCurrStep);
 	bisRead->command(nInput, readInput);
 
 	hEnergyMin = CallMinimize();
-	CopyAtoms(hAtoms,atomPtr);
+	UpdateAtoms(tAtoms);
+	CopyAtoms(hAtoms,tAtoms);
 
 	//Test Functions
 	//TestComputeDifference();
 	//TestMinimize(nsteps, bisRead, nInput, readInput);
 	if(me==0)
 	{
-		/*fprintf(fp,"The lattice is:\n");
-		for(int i=0;i<3;i++)
-		{
-			fprintf(fp,"%f\t", domain->prd[i]);
-		}*/
-		fprintf(fp,"\n");
 		if(ComputeDifference(lAtoms,hAtoms)<epsT)
 		{
 			fprintf(fp,"End-points for bisection have same minimum.  Bisection may fail.\n");
 		}
 	}
-	//fprintf(screen,"The readInput[1] value is %s and the x position of the first atom is %f \n", readInput[1],lAtoms[0][0]);
-
-	//Creates a Minimize class, and then has it minimize the loaded atomic configuration, using the parsed arguments.
 
 	bigint iSteps = 0;
-	int extraMin = 0;
-	bigint* extraList;
-	extraList = (bigint *) memory->smalloc(10*sizeof(bigint),
-            "bisection:extraList");
 
-	while(iSteps<(log2(nsteps)+1))
+	while(iSteps<maxSteps)
 	{
 		intCurrStep = UpdateDumpArgs((higherStep-lowerStep)/2+lowerStep,charCurrStep);
 		tEnergyMin = CallMinimize();
-		CopyAtoms(tAtoms,atomPtr);
+		UpdateAtoms(tAtoms);
 		eDiff = fabs(tEnergyMin-lEnergyMin);
-		distDiff = ComputeDifference(lAtoms,tAtoms); 
-		if(distDiff<epsT)
+		lDistDiff = ComputeDifference(lAtoms,tAtoms); 
+		hDistDiff = ComputeDifference(hAtoms,tAtoms);
+		if((lDistDiff<hDistDiff)&&(lDistDiff<epsT))
 		{
+			if(me==0)  fprintf(fp, "UPDATE-Match L (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
+                                        hEnergyMin, eDiff, lDistDiff, intCurrStep, higherStep);
 			lowerStep = intCurrStep;
 			CopyAtoms(lAtoms, tAtoms);
 			lEnergyMin = tEnergyMin;
 		}
 		else{
-			distDiff = ComputeDifference(hAtoms,tAtoms);
-			if(distDiff<epsT)
+			if(hDistDiff<epsT)
 			{
+				if(me==0)  fprintf(fp, "UPDATE-Match U (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
+                                        hEnergyMin, eDiff, hDistDiff, lowerStep, intCurrStep);
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, tAtoms);
 				hEnergyMin = tEnergyMin;
 			}
 			else{
-				extraList[extraMin] = intCurrStep;
-				extraMin++;
+				if(me==0)  fprintf(fp, "UPDATE-Match U (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
+					hEnergyMin, eDiff, hDistDiff, lowerStep, intCurrStep);
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, tAtoms);
 				hEnergyMin = tEnergyMin;
 			}
 		}
 		eDiff = fabs(hEnergyMin-lEnergyMin);
-		if(me==0)  fprintf(fp, "UPDATE (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
-					hEnergyMin, eDiff, distDiff, lowerStep, higherStep);
 		iSteps++;
 		if(higherStep-lowerStep<=1) break;
 	}
 
 	if(me==0) WriteTLS(intCurrStep,lAtoms,hAtoms,lEnergyMin,hEnergyMin);
+	StoreAtoms(lAtoms, hAtoms);
+	//WriteAtoms(lAtoms, hAtoms);
+	if(me==0) fprintf(screen, "The first atom position is %f\n",lAtoms[0][0]);
 
 	//Deletes readInput and atom arrays, to prevent memory leaks.
 	
@@ -200,6 +203,11 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	DeleteAtomArray(hAtoms);
 	DeleteAtomArray(tAtoms);	
 	if(me==0) fclose(fp);
+
+    	if (atom->map_style!=0) {
+      		atom->map_delete();
+	      	atom->map_style = 0;
+    	}
 
 	return;
 }
@@ -396,10 +404,11 @@ void Bisection::WriteTLS(bigint step, double** x1, double** x2, double E1, doubl
 
 double** Bisection::InitAtomArray()
 {
-	double** atomArray = new double*[atom->natoms];
+	double *data = (double *)malloc(3*atom->natoms*sizeof(double));
+	double** atomArray = (double **)malloc(atom->natoms*sizeof(double *));
 	for(int i=0; i<atom->natoms; i++)
 	{
-		atomArray[i] = new double[domain->dimension];
+		atomArray[i] = &(data[3*i]);
 
 	}
 	return atomArray;
@@ -407,11 +416,9 @@ double** Bisection::InitAtomArray()
 
 void Bisection::DeleteAtomArray(double** atomArray)
 {
-	for(int i=0; i<atom->natoms; i++)
-	{
-		delete atomArray[i];
-	}
-	delete atomArray;
+	memory->sfree(atomArray[0]);
+	memory->sfree(atomArray);
+	return;
 }
 
 void Bisection::CopyAtoms(double** copyArray, double** templateArray)
@@ -423,4 +430,132 @@ void Bisection::CopyAtoms(double** copyArray, double** templateArray)
 			copyArray[i][j] = templateArray[i][j];
 		}
 	}
+}
+
+void Bisection::MappedCopyAtoms(double** copyArray, double** templateArray)
+{
+	int m;
+        for(int i=1;i<=atom->natoms;i++)
+        {
+		m = atom->map(i);
+		if(m>=0 && m<atom->nlocal)
+		{
+			for(int j=0;j<domain->dimension;j++)
+			{
+				copyArray[m][j] = templateArray[i-1][j];
+			}
+		}
+        }
+}
+
+void Bisection::StoreAtoms(double** pos1, double** pos2)
+{
+	char **newarg = new char*[5];
+        int me;
+        MPI_Comm_rank(world,&me);
+
+	newarg[0] = (char *) "TLS1";
+	newarg[1] = (char *) "all";
+	newarg[2] = (char *) "STORE";
+	newarg[3] = (char *) "0";
+	newarg[4] = (char *) "3";
+	modify->add_fix(5,newarg);
+	FixStore *TLS1 = (FixStore *) modify->fix[modify->nfix-1];
+	MappedCopyAtoms(TLS1->astore,pos1);
+	
+	newarg[0] = (char *) "TLS2";
+	modify->add_fix(5,newarg);
+        FixStore *TLS2 = (FixStore *) modify->fix[modify->nfix-1];
+        MappedCopyAtoms(TLS2->astore,pos2);
+
+	delete [] newarg;
+}
+
+/*void Bisection::WriteAtoms(double** pos1, double** pos2)
+{
+        char **newarg = new char*[5];
+        int me;
+        MPI_Comm_rank(world,&me);
+
+        newarg[0] = (char *) "TLS1";
+        newarg[1] = (char *) "all";
+        newarg[2] = (char *) "atom";
+        newarg[3] = (char *) "0";
+        newarg[4] = (char *) "TLS1.dump";
+        CopyAtoms(atom->x,pos1);
+	Dump *TLS1 = new Dump_Atom(lmp);
+	TLS1->command(5,newarg);
+	delete TLS1;
+
+        newarg[0] = (char *) "TLS2";
+	newarg[4] = (char *) "TLS2.dump";
+        CopyAtoms(atom->x,pos2);
+	Dump *TLS2 = new Dump_Atom(lmp);
+	TLS2->command(5,newarg);
+	delete TLS2;
+
+        delete [] newarg;
+	return;
+}*/
+
+void Bisection::UpdateAtoms(double** currAtoms)
+{
+	double** atomPtr = atom->x;
+	double* tArr1 = new double[domain->dimension*atom->natoms];
+	double* tArr2 = new double[domain->dimension*atom->natoms];
+	int *mask = atom->mask;
+        int me;
+	int m;
+        MPI_Comm_rank(world,&me);
+	//int groupbit = group->bitmask[igroup];
+	if (atom->map_style == 0) {
+		atom->nghost = 0;
+		atom->map_init();
+		atom->map_set();
+	}
+	//std::cout << "Number of local atoms: " << me << "\t" << atom->nlocal << std::endl;
+	for(int i = 1; i <= atom->natoms; i++)
+	{
+		m = atom->map(i);
+		//if (mask[m]) {
+		if(m>=0 && m<atom->nlocal)
+		{
+			//std::cout << me << "\t" << i << "\t" << m << "\t" << atomPtr[m][0] << std::endl;
+			//std::cout << i << "\t" << atomPtr[m][0] << "\t" << atomPtr[m][1] << "\t" << atomPtr[m][2] << std::endl;
+			for(int j = 0; j < domain->dimension; j++)
+			{
+				tArr1[3*(i-1)+j] = atomPtr[m][j];
+			}
+		}
+		else
+		{
+			for(int j = 0; j < domain->dimension; j++)
+                        {
+                                tArr1[3*(i-1)+j] = 0.0;
+			}
+		}
+	}
+
+	//if(me==0) fprintf(screen, "Finshed the loop!\n");
+	
+	MPI_Allreduce(tArr1,tArr2,(3*atom->natoms),MPI_DOUBLE,MPI_SUM,world);
+	
+	for(int i=0; i < atom->natoms; i++)
+	{
+		for(int j=0; j < domain->dimension; j++)
+		{
+			currAtoms[i][j] = tArr2[3*i+j];
+		}
+	}
+	
+	/*if(me==0)
+	{
+		for(int i=0; i< atom->natoms; i++)
+		{
+			fprintf(screen,"Atom %d, %f\t%f\t%f\n",i,currAtoms[i][0],currAtoms[i][1],currAtoms[i][2]);
+		}
+	}*/
+	
+
+	return;
 }
