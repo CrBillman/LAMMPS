@@ -29,7 +29,7 @@ SHLIBFLAGS =	-shared
 # LAMMPS ifdef settings
 # see possible settings in Section 2.2 (step 4) of manual
 
-LMP_INC =	-DLAMMPS_GZIP -DLAMMPS_JPEG
+LMP_INC =	
 
 # MPI library
 # see discussion in Section 2.2 (step 5) of manual
@@ -40,7 +40,7 @@ LMP_INC =	-DLAMMPS_GZIP -DLAMMPS_JPEG
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC =       -I/usr/mpi/intel/openmpi-1.6/include
+MPI_INC =       -I$(HPC_OPENMPI_INC)
 MPI_PATH = 	
 MPI_LIB =	
 
@@ -51,9 +51,13 @@ MPI_LIB =
 # PATH = path for FFT library
 # LIB = name of FFT library
 
-FFT_INC =       -I/apps/fftw/3.3.3/include/
+#FFT_INC =       -I/apps/fftw/3.3.3/include/
+#FFT_PATH = 	
+#FFT_LIB =	/apps/intel/2013/fftw/3.3.3/lib/libfftw3.a
+
+FFT_INC =       -I$(HPC_FFTW_INC)
 FFT_PATH = 	
-FFT_LIB =	/apps/intel/2013/fftw/3.3.3/lib/libfftw3.a
+FFT_LIB =	-L$(HPC_FFTW_LIB) -lfftw3
 
 # JPEG and/or PNG library
 # see discussion in Section 2.2 (step 7) of manual
@@ -64,7 +68,7 @@ FFT_LIB =	/apps/intel/2013/fftw/3.3.3/lib/libfftw3.a
 
 JPG_INC =       
 JPG_PATH = 	
-JPG_LIB =	-ljpeg
+JPG_LIB =
 
 # ---------------------------------------------------------------------
 # build rules and dependencies

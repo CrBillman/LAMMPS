@@ -33,22 +33,24 @@ private:
 	FILE *fp;
 	int inputSetFlag;
 	double epsT;
+        double** lAtoms;
+        double** hAtoms;
+        double** tAtoms;
 	void BisectionFromMD(bigint, char*);
 	int ConvertToChar(char **, std::string);
 	double CallMinimize();
 	int UpdateDumpArgs(bigint, char*);
-	double ComputeDifference(double**,double**);
+	double ComputeDistance(double**,double**);
 	void WriteTLS(bigint, double**, double**, double, double);
 	void OpenTLS();
 	void TestMinimize(bigint, ReadDump*, int, char**);
-	void TestComputeDifference();
+	void TestComputeDistance();
 	void StoreAtoms(double**, double**);
 	void WriteAtoms(double**, double**);
         void CopyAtoms(double**, double**);
         void MappedCopyAtoms(double**, double**);
-        double** InitAtomArray();
+        void InitAtomArrays();
         void DeleteAtomArray(double**);
-	void UpdateAtoms(double**);
 public:
 	Bisection(class LAMMPS *);
 	void command(int, char **);
