@@ -42,7 +42,7 @@ using namespace LAMMPS_NS;
 
 Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp)
 {
-	nAtomArrays = 0;
+        nMRelSteps = 1000;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -426,18 +426,6 @@ void Bisection::WriteTLS(bigint step, double** x1, double** x2, double E1, doubl
 	return;
 }
 
-/*double** Bisection::InitAtomArray()
-{
-	double *data = (double *)malloc(3*atom->natoms*sizeof(double));
-	double** atomArray = (double **)malloc(atom->natoms*sizeof(double *));
-	for(int i=0; i<atom->natoms; i++)
-	{
-		atomArray[i] = &(data[3*i]);
-
-	}
-	return atomArray;
-}*/
-
 void Bisection::InitAtomArrays()
 {
 	char **newarg = new char*[5];
@@ -489,22 +477,14 @@ void Bisection::CopyAtoms(double** copyArray, double** templateArray)
 	return;
 }
 
-void Bisection::MappedCopyAtoms(double** copyArray, double** templateArray)
-{
-	int m;
-        for(int i=1;i<=atom->natoms;i++)
-        {
-		m = atom->map(i);
-		if(m>=0 && m<atom->nlocal)
-		{
-			for(int j=0;j<domain->dimension;j++)
-			{
-				copyArray[m][j] = templateArray[i-1][j];
-			}
-		}
-        }
+void Bisection::ConvertIntToChar(char *copy, int n)
+{       
+        std::ostringstream oss;
+        oss << n;
+        std::string dStr = oss.str();
+        std::strcpy(copy,dStr.c_str());
+        return;
 }
-
 
 //Stores atomic position arrays in a StoreFix.  StoreFix's are labelled using a char array identifier as well as indexed.  To recall a StoreFix, you can search for the index using the char array label
 //as illustrated in the ridge class.  This function stores the atomic positions for both minima in StoreFix's, one labelled 'TLS1' and the other labelled 'TLS2'.

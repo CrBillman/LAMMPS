@@ -32,6 +32,7 @@ private:
 	int nAtomArrays;
 	FILE *fp;
 	int inputSetFlag;
+	double nMRelSteps;
 	double epsT;
         double** lAtoms;
         double** hAtoms;
@@ -51,6 +52,7 @@ private:
         void MappedCopyAtoms(double**, double**);
         void InitAtomArrays();
         void DeleteAtomArray(double**);
+	void ConvertIntToChar(char *, int);
 public:
 	Bisection(class LAMMPS *);
 	void command(int, char **);

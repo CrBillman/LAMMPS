@@ -86,7 +86,6 @@ void Ridge::PerformRidge()
 	CopyAtoms(lAtoms,atom->x);
 	
 	CopyAtoms(atom->x,pTLS2);
-	UpdateMapping();
 	eTLS2 = CallMinimize();
 	//if(me==0) lAtoms[0][0] = 10.0;
 	CopyAtoms(hAtoms,atom->x);
