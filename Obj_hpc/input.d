@@ -162,12 +162,12 @@ input.o: ../input.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
  /usr/include/stdint.h /usr/include/bits/wordsize.h /usr/include/inttypes.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stdint.h \
  ../lammps.h ../style_command.h ../balance.h ../bisection.h ../read_dump.h \
- ../change_box.h ../create_atoms.h ../create_bonds.h ../create_box.h \
- ../delete_atoms.h ../delete_bonds.h ../displace_atoms.h ../info.h ../minimize.h \
- ../read_data.h ../read_dump.h ../read_restart.h ../replicate.h ../rerun.h \
- ../ridge.h ../run.h ../set.h ../velocity.h ../write_data.h ../write_dump.h \
- ../write_restart.h ../universe.h ../atom.h ../atom_vec.h ../comm.h \
- ../comm_brick.h ../comm_tiled.h ../group.h ../domain.h \
+ ../change_box.h ../couple_elastic.h ../create_atoms.h ../create_bonds.h \
+ ../create_box.h ../delete_atoms.h ../delete_bonds.h ../displace_atoms.h \
+ ../info.h ../minimize.h ../read_data.h ../read_dump.h ../read_restart.h \
+ ../replicate.h ../rerun.h ../ridge.h ../run.h ../set.h ../velocity.h \
+ ../write_data.h ../write_dump.h ../write_restart.h ../universe.h ../atom.h \
+ ../atom_vec.h ../comm.h ../comm_brick.h ../comm_tiled.h ../group.h ../domain.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/math.h \
  /usr/include/math.h /usr/include/bits/huge_val.h /usr/include/bits/huge_valf.h \
  /usr/include/bits/huge_vall.h /usr/include/bits/inf.h /usr/include/bits/nan.h \
@@ -179,7 +179,8 @@ input.o: ../input.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
  ../dihedral.h ../improper.h ../kspace.h ../update.h ../special.h ../timer.h \
  ../variable.h ../accelerator_cuda.h ../verlet.h ../integrate.h ../error.h \
  ../memory.h ../style_command.h ../balance.h ../bisection.h ../change_box.h \
- ../create_atoms.h ../create_bonds.h ../create_box.h ../delete_atoms.h \
- ../delete_bonds.h ../displace_atoms.h ../info.h ../minimize.h ../read_data.h \
- ../read_dump.h ../read_restart.h ../replicate.h ../rerun.h ../ridge.h ../run.h \
- ../set.h ../velocity.h ../write_data.h ../write_dump.h ../write_restart.h
+ ../couple_elastic.h ../create_atoms.h ../create_bonds.h ../create_box.h \
+ ../delete_atoms.h ../delete_bonds.h ../displace_atoms.h ../info.h ../minimize.h \
+ ../read_data.h ../read_dump.h ../read_restart.h ../replicate.h ../rerun.h \
+ ../ridge.h ../run.h ../set.h ../velocity.h ../write_data.h ../write_dump.h \
+ ../write_restart.h

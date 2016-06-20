@@ -1,0 +1,12 @@
+This package contains compute hessian and compute freq commands to
+output the hessian matrix (hessian) or its eigenvalues and
+eigenvectors (freq).  Also includes couple_elastic command to 
+calculate the elastic and coupling constants for configurations
+making up a two-level-system (amorphous oxides).
+
+To use, type 'make-user-tls' from the src directory.  Then, make
+lammps as you normally would for your system.
+
+The person who created this package is Jonathan Trinastic
+(jptrinastic at gmail dot com) at the University of Florida. Contact
+him directly if you have questions.

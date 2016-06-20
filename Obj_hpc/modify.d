@@ -148,11 +148,11 @@ modify.o: ../modify.cpp /usr/include/stdio.h /usr/include/features.h \
  ../compute_chunk_atom.h ../compute_cluster_atom.h ../compute_cna_atom.h \
  ../compute_com_chunk.h ../compute_com.h ../compute_contact_atom.h \
  ../compute_coord_atom.h ../compute_dihedral_local.h ../compute_displace_atom.h \
- ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h \
+ ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h ../compute_freq.h \
  ../compute_group_group.h ../compute_gyration_chunk.h ../compute_gyration.h \
- ../compute_heat_flux.h ../compute_hexorder_atom.h ../compute_improper_local.h \
- ../compute_inertia_chunk.h ../compute_ke_atom.h ../compute_ke.h \
- ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
+ ../compute_heat_flux.h ../compute_hessian.h ../compute_hexorder_atom.h \
+ ../compute_improper_local.h ../compute_inertia_chunk.h ../compute_ke_atom.h \
+ ../compute_ke.h ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
  ../compute_orientorder_atom.h ../compute_pair.h ../compute_pair_local.h \
  ../compute_pe_atom.h ../compute_pe.h ../compute_pressure.h \
  ../compute_property_atom.h ../compute_property_chunk.h \
@@ -220,10 +220,11 @@ modify.o: ../modify.cpp /usr/include/stdio.h /usr/include/features.h \
  ../compute_cna_atom.h ../compute_com_chunk.h ../compute_com.h \
  ../compute_contact_atom.h ../compute_coord_atom.h ../compute_dihedral_local.h \
  ../compute_displace_atom.h ../compute_erotate_sphere_atom.h \
- ../compute_erotate_sphere.h ../compute_group_group.h ../compute_gyration_chunk.h \
- ../compute_gyration.h ../compute_heat_flux.h ../compute_hexorder_atom.h \
- ../compute_improper_local.h ../compute_inertia_chunk.h ../compute_ke_atom.h \
- ../compute_ke.h ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
+ ../compute_erotate_sphere.h ../compute_freq.h ../compute_group_group.h \
+ ../compute_gyration_chunk.h ../compute_gyration.h ../compute_heat_flux.h \
+ ../compute_hessian.h ../compute_hexorder_atom.h ../compute_improper_local.h \
+ ../compute_inertia_chunk.h ../compute_ke_atom.h ../compute_ke.h \
+ ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
  ../compute_orientorder_atom.h ../compute_pair.h ../compute_pair_local.h \
  ../compute_pe_atom.h ../compute_pe.h ../compute_pressure.h \
  ../compute_property_atom.h ../compute_property_chunk.h \

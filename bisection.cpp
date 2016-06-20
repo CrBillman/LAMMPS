@@ -43,6 +43,7 @@ using namespace LAMMPS_NS;
 Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp)
 {
         nMRelSteps = 1000;
+	maxAlphaSteps = 15;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -167,6 +168,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, intCurrStep, higherStep);
 			lowerStep = intCurrStep;
+			CopyAtoms(lAtoms, tAtoms);
 			lEnergyMin = tEnergyMin;
 		}
 		else{
@@ -175,6 +177,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 				if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, hDistDiff, lowerStep, intCurrStep);
 				higherStep = intCurrStep;
+				CopyAtoms(hAtoms, tAtoms);
 				hEnergyMin = tEnergyMin;
 			}
 			else{
@@ -237,8 +240,9 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 double Bisection::CallMinimize()
 {       
         int Steps = nMRelSteps;
-        int maxLoops = 10;
+        int maxLoops = 40;
         int me;
+	int alphaCounter = 0;
         char cSteps[10];
         char cFSteps[10];
         MPI_Comm_rank(world,&me);
@@ -261,11 +265,14 @@ double Bisection::CallMinimize()
                         ConvertIntToChar(cFSteps,Steps);
                         ConvertIntToChar(cFSteps,10*Steps);
                 }
-                else    
-                {       
-                        return update->minimize->efinal;
-                }
-        }
+		else if((update->minimize->stop_condition==5)&&(alphaCounter<maxAlphaSteps))
+		{
+                        if(me==0) fprintf(screen, "Minimization did not converge, resubmitting to handle alpha linesearch stopping condition. Counter:%d; Max:%d.\n",alphaCounter,maxAlphaSteps);
+			alphaCounter++;
+		}
+		else break;
+	}
+	return update->minimize->efinal;
 }
 
 
