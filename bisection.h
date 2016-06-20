@@ -30,6 +30,7 @@ namespace LAMMPS_NS {
 class Bisection : protected Pointers {
 private:
 	int nAtomArrays;
+	int maxAlphaSteps;
 	FILE *fp;
 	int inputSetFlag;
 	double nMRelSteps;

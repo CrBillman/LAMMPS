@@ -34,6 +34,8 @@
 #include "ridge.h"
 #include "irregular.h"
 #include <iostream>
+#include "compute.h"
+#include "compute_freq.h"
 
 using namespace LAMMPS_NS;
 
@@ -42,7 +44,7 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 Ridge::Ridge(LAMMPS *lmp) : Pointers(lmp) {
-	epsF = 1e-4;
+	epsF = 25e-3;
 	nPRelSteps = 5;
 	nMRelSteps = 1000;
 }
@@ -65,19 +67,10 @@ void Ridge::command(int narg, char **arg){
 
 void Ridge::PerformRidge()
 {
-        //double** lAtoms = InitAtomArray();
-        //double** hAtoms = InitAtomArray();
-        //double** tAtoms = InitAtomArray();
         int me;
 	bool sFlag;
         MPI_Comm_rank(world,&me);
 	if(me==0) OpenTLS();
-        /*if (atom->map_style == 0) {
-		if(me==0) fprintf(screen, "Ridge: Getting new map\n");
-                atom->nghost = 0;
-                atom->map_init();
-                atom->map_set();
-        }*/
 	CallMinimize();
         if(LoadPositions()<0) error->all(FLERR,"Ridge Method -- Atomic positions not stored in fix_store.");
 	InitAtomArrays();
@@ -87,8 +80,13 @@ void Ridge::PerformRidge()
 	
 	CopyAtoms(atom->x,pTLS2);
 	eTLS2 = CallMinimize();
-	//if(me==0) lAtoms[0][0] = 10.0;
 	CopyAtoms(hAtoms,atom->x);
+	float chDist = ComputeDistance(lAtoms,hAtoms);
+	if(chDist<epsT)
+	{
+		if(me==0) fprintf(screen, "UPDATE-End-points relaxed to same minimum (distance is %f), leaving ridge method.\n", chDist);
+		return;
+	}
 	if(me==0) fprintf(screen, "UPDATE-Asymmetry: %f\n",eTLS2-eTLS1);
 
 	//TestComputeDistance();
@@ -622,11 +620,9 @@ double Ridge::CallMinimize()
 			ConvertIntToChar(cFSteps,Steps);
 			ConvertIntToChar(cFSteps,10*Steps);
 		}
-		else
-		{
-			return update->minimize->efinal;
-		}
+		else break;
 	}
+	return update->minimize->efinal;
 }
 
 void Ridge::ConvertIntToChar(char *copy, int n)
@@ -641,24 +637,61 @@ void Ridge::ConvertIntToChar(char *copy, int n)
 bool Ridge::CheckSaddle(double** pos)
 {
 	int me;
+	float eps = 1e-6;
 	MPI_Comm_rank(world,&me);
 	if(me==0) fprintf(screen, "Checking Saddle.\n");
         char **newarg = new char*[4];
         newarg[0] = (char *) "0.0";
         newarg[1] = (char *) "0.0";
-        newarg[2] = (char *) "1";
-        newarg[3] = (char *) "1";
+        newarg[2] = (char *) "0";
+        newarg[3] = (char *) "0";
         Minimize* rMin = new Minimize(lmp);
 	CopyAtoms(atom->x,pos);
         rMin->command(4, newarg);
         delete rMin;
-	if(update->minimize->fnorm2_init < epsF)
+	if(update->minimize->fnorminf_final < epsF)
 	{
-		CopyAtoms(pTLSs, pos);
-		return true;
+		int nNeg = 0;
+		int nPos = 0;
+		int iSaddleCheck = InitHessianCompute();
+		Compute* hessian = modify->compute[iSaddleCheck];
+		hessian->compute_array();
+		int ndof = 3*atom->natoms;
+		for(int i = 0; i < ndof; i++)
+		{
+			//for(int j =0; j < ndof; j++) if(me==0) std::cout << hessian->array[i][j] << std::endl;
+			if(hessian->array[i][0]>eps) nPos++;
+			else if(hessian->array[i][0]<(-eps)) nNeg++;
+		}
+		if(nNeg == 1)
+		{
+			if(me==0) fprintf(screen, "UPDATE-Passes Saddle Point check.\n");
+			CopyAtoms(pTLSs, pos);
+			modify->delete_compute("SaddleCheck");
+			return true;
+		}
+		if(me==0) fprintf(screen, "UPDATE-Fails Saddle Point check with %d negative entries.\n", nNeg);
+		modify->delete_compute("SaddleCheck");
 	}
 	return false;
 }
+
+int Ridge::InitHessianCompute()
+{ 
+	// Create hessian compute
+	char **newarg = new char*[5];
+	newarg[0] = (char *) "SaddleCheck";
+	newarg[1] = (char *) "all";
+	newarg[2] = (char *) "freq";
+	newarg[3] = (char *) "0.01";
+	modify->add_compute(4,newarg);
+
+	int iSaddleCheck = modify->find_compute("SaddleCheck");
+
+	delete [] newarg;
+	return iSaddleCheck;
+}
+
 
 void Ridge::InitAtomArrays()
 {

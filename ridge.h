@@ -46,6 +46,7 @@ private:
         void DeleteAtomArray(double **);
         double CallMinimize();
         double ComputeDistance(double **,double **);
+	int InitHessianCompute();
 	void TestComputeDistance();
         void WriteTLS(double, double, double);
         void OpenTLS();
