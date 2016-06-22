@@ -185,10 +185,10 @@ modify.o: ../modify.cpp /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/sysmacros.h /usr/include/alloca.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stddef.h \
  ../fix_spring.h ../fix_spring_rg.h ../fix_spring_self.h ../fix_store_force.h \
- ../fix_store.h ../fix_store_state.h ../fix_temp_berendsen.h ../fix_temp_csld.h \
- ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h \
- ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall.h \
- ../fix_wall_lj1043.h ../fix_wall_lj126.h ../fix_wall_lj93.h \
+ ../fix_store.h ../fix_store_lat.h ../fix_store_state.h ../fix_temp_berendsen.h \
+ ../fix_temp_csld.h ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h \
+ ../fix_tune_kspace.h ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h \
+ ../fix_wall.h ../fix_wall_lj1043.h ../fix_wall_lj126.h ../fix_wall_lj93.h \
  ../fix_wall_reflect.h ../fix_wall_region.h ../atom.h ../comm.h ../group.h \
  ../update.h ../domain.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/math.h \
@@ -210,21 +210,21 @@ modify.o: ../modify.cpp /usr/include/stdio.h /usr/include/features.h \
  ../fix_press_berendsen.h ../fix_print.h ../fix_property_atom.h ../fix_qeq_comb.h \
  ../fix_read_restart.h ../fix_recenter.h ../fix_respa.h ../fix_restrain.h \
  ../fix_setforce.h ../fix_shear_history.h ../fix_spring.h ../fix_spring_rg.h \
- ../fix_spring_self.h ../fix_store_force.h ../fix_store.h ../fix_store_state.h \
- ../fix_temp_berendsen.h ../fix_temp_csld.h ../fix_temp_csvr.h \
- ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h ../fix_vector.h \
- ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall_lj1043.h ../fix_wall_lj126.h \
- ../fix_wall_lj93.h ../fix_wall_reflect.h ../fix_wall_region.h ../style_compute.h \
- ../compute_angle_local.h ../compute_angmom_chunk.h ../compute_bond_local.h \
- ../compute_centro_atom.h ../compute_chunk_atom.h ../compute_cluster_atom.h \
- ../compute_cna_atom.h ../compute_com_chunk.h ../compute_com.h \
- ../compute_contact_atom.h ../compute_coord_atom.h ../compute_dihedral_local.h \
- ../compute_displace_atom.h ../compute_erotate_sphere_atom.h \
- ../compute_erotate_sphere.h ../compute_freq.h ../compute_group_group.h \
- ../compute_gyration_chunk.h ../compute_gyration.h ../compute_heat_flux.h \
- ../compute_hessian.h ../compute_hexorder_atom.h ../compute_improper_local.h \
- ../compute_inertia_chunk.h ../compute_ke_atom.h ../compute_ke.h \
- ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
+ ../fix_spring_self.h ../fix_store_force.h ../fix_store.h ../fix_store_lat.h \
+ ../fix_store_state.h ../fix_temp_berendsen.h ../fix_temp_csld.h \
+ ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h \
+ ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall_lj1043.h \
+ ../fix_wall_lj126.h ../fix_wall_lj93.h ../fix_wall_reflect.h \
+ ../fix_wall_region.h ../style_compute.h ../compute_angle_local.h \
+ ../compute_angmom_chunk.h ../compute_bond_local.h ../compute_centro_atom.h \
+ ../compute_chunk_atom.h ../compute_cluster_atom.h ../compute_cna_atom.h \
+ ../compute_com_chunk.h ../compute_com.h ../compute_contact_atom.h \
+ ../compute_coord_atom.h ../compute_dihedral_local.h ../compute_displace_atom.h \
+ ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h ../compute_freq.h \
+ ../compute_group_group.h ../compute_gyration_chunk.h ../compute_gyration.h \
+ ../compute_heat_flux.h ../compute_hessian.h ../compute_hexorder_atom.h \
+ ../compute_improper_local.h ../compute_inertia_chunk.h ../compute_ke_atom.h \
+ ../compute_ke.h ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
  ../compute_orientorder_atom.h ../compute_pair.h ../compute_pair_local.h \
  ../compute_pe_atom.h ../compute_pe.h ../compute_pressure.h \
  ../compute_property_atom.h ../compute_property_chunk.h \

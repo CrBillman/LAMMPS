@@ -29,6 +29,7 @@ namespace LAMMPS_NS {
 
 class Bisection : protected Pointers {
 private:
+	bool matchExit;
 	int nAtomArrays;
 	int maxAlphaSteps;
 	FILE *fp;
