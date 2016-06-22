@@ -300,7 +300,8 @@ int Ridge::LoadPositions()
 
 	//Adds the Fix, and stores the pos1 array in the astore variable of the StoreFix command.
         modify->add_fix(5,newarg);
-        FixStore *TLSs = (FixStore *) modify->fix[modify->nfix-1];
+	int iTLSs = modify->find_fix((char *) "TLSs");
+        FixStore *TLSs = (FixStore *) modify->fix[iTLSs];
         CopyAtoms(TLSs->astore,pTLS1);
 	pTLSs = TLSs->astore;
 
@@ -364,6 +365,7 @@ void Ridge::CopyAtoms(double** copyArray, double** templateArray)
 			copyArray[i][j] = templateArray[i][j];
 		}
         }
+	for (int i = 0; i < atom->nlocal; i++) domain->remap(atom->x[i],atom->image[i]);
 	return;
 }
 
@@ -703,9 +705,10 @@ void Ridge::InitAtomArrays()
         newarg[4] = (char *) "3";
 
 //Adds the Fix, and stores the pos1 array in the astore variable of the StoreFix command.
-        modify->add_fix(5,newarg); 
-        FixStore *lTLS = (FixStore *) modify->fix[modify->nfix-1];
-        lAtoms = lTLS->astore;
+        modify->add_fix(5,newarg);
+	int iTLSl = modify->find_fix((char *) "TLSl");
+        FixStore *TLSl = (FixStore *) modify->fix[iTLSl];
+        lAtoms = TLSl->astore;
         
 
 //Changes the argument of the input so that the second fix created has the label 'TLS2'.        
@@ -714,14 +717,16 @@ void Ridge::InitAtomArrays()
 
 //Adds the Fix, and stores the pos2 array in the astore variable of the StoreFix command.
         modify->add_fix(5,newarg); 
-        FixStore *hTLS = (FixStore *) modify->fix[modify->nfix-1];
-        hAtoms = hTLS->astore;
+	int iTLSh = modify->find_fix((char *) "TLSh");
+        FixStore *TLSh = (FixStore *) modify->fix[iTLSh];
+        hAtoms = TLSh->astore;
         
         newarg[0] = (char *) "TLSt";
         
-        modify->add_fix(5,newarg); 
-        FixStore *tTLS = (FixStore *) modify->fix[modify->nfix-1];
-        tAtoms = tTLS->astore;
+        modify->add_fix(5,newarg);
+	int iTLSt = modify->find_fix((char *) "TLSt");
+        FixStore *TLSt = (FixStore *) modify->fix[iTLSt];
+        tAtoms = TLSt->astore;
         return;
 }
 
