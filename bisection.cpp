@@ -43,7 +43,7 @@ using namespace LAMMPS_NS;
 Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp)
 {
         nMRelSteps = 1000;     				//The number of relaxation steps to start with for CallMinimize()
-	maxAlphaSteps = 15;    				//The maximum number of addition minimizations to do because of the 'alpha linsearch' stopping condition.  For larger values, it helps the minimization actually move toward the true minimum.
+	maxAlphaSteps = 5;    				//The maximum number of addition minimizations to do because of the 'alpha linsearch' stopping condition.  For larger values, it helps the minimization actually move toward the true minimum.
         matchExit = true;                               //Determines whether or not to exit if the end-points of the trajectory relax to the same minimum
 }
 
@@ -285,8 +285,10 @@ int Bisection::UpdateDumpArgs(bigint currStep, char *charCurrStep)
 double Bisection::ComputeDistance(double** pos1, double** pos2)
 {       
         double dist = 0.0;
+	double atomDist;
         double diff;
         double mTot = 0.0;
+	double distCriteria = 0.01;
         double* m = atom->mass;
         int* type = atom->type;
         int me;
@@ -295,7 +297,7 @@ double Bisection::ComputeDistance(double** pos1, double** pos2)
         for(int i=0; i<atom->nlocal;i++)
         {       
                 diff = 0.0; 
-                mTot = mTot + m[type[i]];
+		atomDist = 0.0;
                 for(int j=0; j<domain->dimension;j++)
                 {       
                         diff = pos2[i][j]-pos1[i][j];
@@ -307,16 +309,21 @@ double Bisection::ComputeDistance(double** pos1, double** pos2)
                         {       
                                 diff = diff - domain->prd[j];
                         }
-                        dist = dist + m[type[i]]*diff*diff;
-                }
+			atomDist = atomDist + diff*diff;
+		}
+		atomDist = sqrt(atomDist);
+		if(atomDist > distCriteria)
+		{
+			mTot = mTot + m[type[i]];
+			dist = dist + m[type[i]]*atomDist;
+		}
         }
-        
-        double commMassDist  [2]= {dist,mTot};
-        double finMassDist [2];
-        
-        MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
 
-        return sqrt(finMassDist[0]/finMassDist[1]);
+	double commMassDist  [2]= {dist,mTot};
+	double finMassDist [2];
+	MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
+	if(finMassDist[1]<1e-6) return 0.0;
+	return finMassDist[0]/finMassDist[1];
 }
 
 void Bisection::OpenTLS()
