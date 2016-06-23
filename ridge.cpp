@@ -44,7 +44,7 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 Ridge::Ridge(LAMMPS *lmp) : Pointers(lmp) {
-	epsF = 25e-3;
+	//epsF = 25e-3;
 	nPRelSteps = 5;
 	nMRelSteps = 1000;
 }
@@ -54,11 +54,12 @@ Ridge::Ridge(LAMMPS *lmp) : Pointers(lmp) {
 
 void Ridge::command(int narg, char **arg){
 	
-	if(narg<3) error->all(FLERR,"Ridge Method -- Illegal run command");
+	if(narg<4) error->all(FLERR,"Ridge Method -- Illegal run command");
 
 	nRSteps = force->numeric(FLERR,arg[0]);
 	nBSteps = force->numeric(FLERR,arg[1]);
 	epsT = force->numeric(FLERR,arg[2]);
+	epsF = force->numeric(FLERR,arg[3]);
 
 	PerformRidge();
 	
@@ -87,7 +88,7 @@ void Ridge::PerformRidge()
 		if(me==0) fprintf(screen, "UPDATE-End-points relaxed to same minimum (distance is %f), leaving ridge method.\n", chDist);
 		return;
 	}
-	if(me==0) fprintf(screen, "UPDATE-Asymmetry: %f\n",eTLS2-eTLS1);
+	if(me==0) fprintf(screen, "UPDATE-Asymmetry: %f\n",fabs(eTLS2-eTLS1));
 
 	//TestComputeDistance();
 	//Runs a couple tests to check that the BisectPositions function is working correctly.
@@ -98,7 +99,6 @@ void Ridge::PerformRidge()
 		{
 			BisectPositions(lAtoms, hAtoms, tAtoms);
 			sFlag = CheckSaddle(tAtoms);
-			//if(me==0) fprintf(screen, "Ridge step: %d.  Bisection Step: %d. x-pos: %f. Force norm: %f\n",i,j,atom->x[1][0],update->minimize->fnorm2_init);
 			if(sFlag)
 			{
 				WriteTLS(eTLS1,eTLS2,update->minimize->efinal);
@@ -112,7 +112,7 @@ void Ridge::PerformRidge()
 		PartialRelax(lAtoms, hAtoms);
 	}
 
-	if(!sFlag) if(me==0) fprintf(screen, "Cannot find saddle.\n");
+	if(!sFlag) if(me==0) fprintf(screen, "UPDATE-Cannot find saddle.\n");
 
 	if(atom->map_style != 0)
 	{
@@ -152,7 +152,6 @@ void Ridge::BisectPositions(double** pos1, double** pos2, double** posOut)
 				diff = diff - domain->prd[j];
 			}
 			posOut[i][j] = posOut[i][j] + 0.5*diff;
-			//std::cout << i << ", " << j << ": " << hAtoms[i][j] << ", " << lAtoms[i][j] << std::endl;
 		}
 	}
 
@@ -380,7 +379,7 @@ void Ridge::OpenTLS()
 
 void Ridge::WriteTLS(double E1, double E2, double E3)
 {
-        double Asym = E2 - E1;
+        double Asym = fabs(E2 - E1);
 	double Barrier= 0.5*((E3-E1)+(E3-E2));
 	int me;
 	MPI_Comm_rank(world,&me);
@@ -434,8 +433,6 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
         newarg[2] = cRelSteps;
         newarg[3] = (char *) "1000";
 
-	if(me==0) fprintf(screen,"Performing first ridge min, with newarg = %s\n",newarg[2]);
-
 	Minimize* rMin = new Minimize(lmp);
 	CopyAtoms(atomPtr,lAtoms);
         rMin->command(4, newarg);
@@ -484,41 +481,51 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 	return;
 }
 
+//Calculates the difference between two minima.  Now, it finds the mass-weighted distance between vectors.
 double Ridge::ComputeDistance(double** pos1, double** pos2)
 {
-	double dist = 0.0;
-	double diff;
-	double mTot = 0.0;
-	double* m = atom->mass;
-	int* type = atom->type;
-	int me;
-	MPI_Comm_rank(world,&me);
-	for(int i=0; i<atom->nlocal;i++)
-	{
-		diff = 0.0;
-		mTot = mTot + m[type[i]];
-		for(int j=0; j<domain->dimension;j++)
+        double dist = 0.0;
+        double atomDist;
+        double diff;
+        double mTot = 0.0;
+	double distCriteria = 0.01;
+        double* m = atom->mass;
+        int* type = atom->type;
+        int me;
+        MPI_Comm_rank(world,&me);
+
+        for(int i=0; i<atom->nlocal;i++)
+        {
+                diff = 0.0;
+                atomDist = 0.0;
+                for(int j=0; j<domain->dimension;j++)
+                {
+                        diff = pos2[i][j]-pos1[i][j];
+                        if(diff < -domain->prd_half[j])
+                        {
+                                diff = diff + domain->prd[j];
+                        }
+                        else if(diff > domain->prd_half[j])
+                        {
+                                diff = diff - domain->prd[j];
+                        }
+                        atomDist = atomDist + diff*diff;
+                }
+                atomDist = sqrt(atomDist);
+		if(atomDist > distCriteria)
 		{
-			diff = pos2[i][j]-pos1[i][j];
-			if(diff < -domain->prd_half[j])
-			{
-				diff = diff + domain->prd[j];
-			}
-			else if(diff > domain->prd_half[j])
-			{
-				diff = diff - domain->prd[j];
-			}
-			dist = dist + m[type[i]]*diff*diff;
+			mTot = mTot + m[type[i]];
+			dist = dist + m[type[i]]*atomDist;
 		}
-	}
+        }
 
-	double commMassDist  [2]= {dist,mTot};
-	double finMassDist [2];
-
-	MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
-
-	return sqrt(finMassDist[0]/finMassDist[1]);
+        double commMassDist  [2]= {dist,mTot};
+        double finMassDist [2];
+        MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
+        if(finMassDist[1]<1e-6) return 0.0;
+        return finMassDist[0]/finMassDist[1];
 }
+
 void Ridge::TestComputeDistance()
 {
         double** Atoms1 = InitAtomArray();
