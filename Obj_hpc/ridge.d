@@ -104,7 +104,7 @@ ridge.o: ../ridge.cpp /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/bits/huge_vall.h /usr/include/bits/inf.h /usr/include/bits/nan.h \
  /usr/include/bits/mathdef.h /usr/include/bits/wordsize.h \
  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls.h \
- /usr/include/bits/mathcalls.h ../run.h ../pointers.h ../lmptype.h \
+ /usr/include/bits/mathcalls.h ../comm.h ../pointers.h ../lmptype.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/limits.h \
  /apps/compilers/gcc/5.2.0/lib/gcc/x86_64-redhat-linux-gnu/5.2.0/include-fixed/limits.h \
  /usr/include/limits.h /usr/include/bits/posix1_lim.h \
@@ -163,7 +163,7 @@ ridge.o: ../ridge.cpp /usr/include/stdlib.h /usr/include/features.h \
  /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/info_inln.h \
  /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/win_inln.h \
  /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/file_inln.h \
- ../lammps.h ../domain.h \
+ ../lammps.h ../run.h ../domain.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/math.h \
  ../update.h ../force.h ../integrate.h ../modify.h ../output.h ../finish.h \
  ../input.h ../timer.h ../error.h ../bisection.h ../read_dump.h ../read_dump.h \

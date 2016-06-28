@@ -36,8 +36,9 @@ private:
         double epsT, epsF;
 	double eTLS1, eTLS2;
 	double **pTLS1, **pTLS2, **pTLSs;
-	double *lat1, *lat2, *latW;
+	double *lat1, *lat2, *latS;
 	double **hAtoms, **lAtoms, **tAtoms;
+	double *hLat, *lLat, *tLat;
 	void PerformRidge();
 	int LoadPositions();
 	void ReadPositions();
@@ -48,8 +49,9 @@ private:
         double CallMinimize();
         double ComputeDistance(double **,double **);
 	int InitHessianCompute();
-	void UpdateStoredLattice(double *);
-	void UpdateWorkingLattice(double *);
+	void CopyLatToBox(double *);
+	void CopyBoxToLat(double *);
+	void CopyLatToLat(double *, double *);
 	void TestComputeDistance();
         void WriteTLS(double, double, double);
         void OpenTLS();
@@ -60,6 +62,7 @@ private:
 	void ConvertIntToChar(char *, int);
 	void UpdateMapping();
 	void InitAtomArrays();
+	void ResetBox();
 	bool CheckSaddle(double **);
 public:
 	Ridge(class LAMMPS *);
