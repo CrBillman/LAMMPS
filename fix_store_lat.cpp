@@ -27,7 +27,7 @@ using namespace FixConst;
 
 FixStoreLat::FixStoreLat(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 {
-  if (narg != 5) error->all(FLERR,"Illegal fix store/lat command");
+  if (narg != 3) error->all(FLERR,"Illegal fix store/lat command");
 
   // Fix store/lat requires domain box to be created
   if (domain->box_exist == 0)

@@ -39,11 +39,15 @@ private:
         double** lAtoms;
         double** hAtoms;
         double** tAtoms;
-	void BisectionFromMD(bigint, char*);
+	double* lat1;
+	double* lat2;
+
 	int ConvertToChar(char **, std::string);
-	double CallMinimize();
 	int UpdateDumpArgs(bigint, char*);
+	double CallMinimize();
 	double ComputeDistance(double**,double**);
+	void BisectionFromMD(bigint, char*);
+	void UpdateLattice(double *);
 	void WriteTLS(bigint, double**, double**, double, double);
 	void OpenTLS();
 	void TestMinimize(bigint, ReadDump*, int, char**);
