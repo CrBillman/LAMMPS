@@ -30,6 +30,7 @@
 #include "atom.h"
 #include "fix.h"
 #include "fix_store.h"
+#include "fix_store_lat.h"
 #include "dump.h"
 #include <iostream>
 #include "write_restart.h"
@@ -141,6 +142,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//Minimizes the first atomic configuration from the dump file and then stores the energy in lEnergyMin.
 	lEnergyMin = CallMinimize();
 	CopyAtoms(lAtoms,atom->x);
+	UpdateLattice(lat1);
 
         //Updates readInput to go to point toward the current step, and updates the current step to be the last step in the trajectory.  
         //Then, loads and minimizes that atomic configuration from the dump file and then stores the energy in hEnergyMin.	
@@ -149,6 +151,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	bisRead->command(nInput, readInput);
 	hEnergyMin = CallMinimize();
 	CopyAtoms(hAtoms,atom->x);
+	UpdateLattice(lat2);
 
 	//Checks the mass-weighted distance between the minimized configurations of the first and last timesteps of the trajectory.  If they are in the same minimum (ie, the mw distance is smaller than the cut-off), then it is unlikely that a TLS
 	//will be found in the trajectory.  If matchExit is true, the bisection method is exited at this point.  If false, it only outputs a warning.	
@@ -175,6 +178,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		{
 			lowerStep = intCurrStep;
 			CopyAtoms(lAtoms, atom->x);
+			UpdateLattice(lat1);
 			lEnergyMin = tEnergyMin;
 			if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, intCurrStep, higherStep);
@@ -184,6 +188,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			{
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, atom->x);
+				UpdateLattice(lat2);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, hDistDiff, lowerStep, intCurrStep);
@@ -191,6 +196,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			else{
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, atom->x);
+				UpdateLattice(lat2);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, hDistDiff, lowerStep, intCurrStep);
@@ -281,7 +287,7 @@ int Bisection::UpdateDumpArgs(bigint currStep, char *charCurrStep)
 	return currStep;
 }
 
-//Calculates the difference between two minima.  Now, it finds the mass-weighted distance between vectors.
+//Calculates the difference between two minima.  Now, it finds the mass-weighted distance for atoms above the distCriteria.
 double Bisection::ComputeDistance(double** pos1, double** pos2)
 {       
         double dist = 0.0;
@@ -376,6 +382,20 @@ void Bisection::InitAtomArrays()
 	int iTLSt = modify->find_fix((char *) "TLSt");
 	FixStore *tTLS = (FixStore *) modify->fix[iTLSt];
 	tAtoms = tTLS->astore;
+
+//Adds fixes for lattice storage.
+	newarg[0] = (char *) "TLSLat1";
+	newarg[2] = (char *) "STORELAT";
+	modify->add_fix(3,newarg);
+	int iTLSl1 = modify->find_fix((char *) "TLSLat1");
+	FixStoreLat *TLSl1 = (FixStoreLat *) modify->fix[iTLSl1];
+	lat1 = TLSl1->vstore;
+
+        newarg[0] = (char *) "TLSLat2";
+        modify->add_fix(3,newarg);
+        int iTLSl2 = modify->find_fix((char *) "TLSLat2");
+        FixStoreLat *TLSl2 = (FixStoreLat *) modify->fix[iTLSl2];
+        lat2 = TLSl2->vstore;
 	return;
 }
 
@@ -399,4 +419,18 @@ void Bisection::ConvertIntToChar(char *copy, int n)
         std::string dStr = oss.str();
         std::strcpy(copy,dStr.c_str());
         return;
+}
+
+void Bisection::UpdateLattice(double *latVector)
+{
+	latVector[0] = domain->boxlo[0];
+	latVector[1] = domain->boxlo[1];
+	latVector[2] = domain->boxlo[2];
+	latVector[3] = domain->boxhi[0];
+	latVector[4] = domain->boxhi[1];
+	latVector[5] = domain->boxhi[2];
+	latVector[6] = domain->xy;
+	latVector[7] = domain->xz;
+	latVector[8] = domain->yz;
+	return;
 }

@@ -36,6 +36,7 @@ private:
         double epsT, epsF;
 	double eTLS1, eTLS2;
 	double **pTLS1, **pTLS2, **pTLSs;
+	double *lat1, *lat2, *latW;
 	double **hAtoms, **lAtoms, **tAtoms;
 	void PerformRidge();
 	int LoadPositions();
@@ -47,6 +48,8 @@ private:
         double CallMinimize();
         double ComputeDistance(double **,double **);
 	int InitHessianCompute();
+	void UpdateStoredLattice(double *);
+	void UpdateWorkingLattice(double *);
 	void TestComputeDistance();
         void WriteTLS(double, double, double);
         void OpenTLS();

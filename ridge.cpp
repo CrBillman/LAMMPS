@@ -31,6 +31,7 @@
 #include "atom.h"
 #include "fix.h"
 #include "fix_store.h"
+#include "fix_store_lat.h"
 #include "ridge.h"
 #include "irregular.h"
 #include <iostream>
@@ -271,6 +272,8 @@ int Ridge::LoadPositions()
 	//First, get the labels for the fixes for the TLS atom positions.
 	int iTLS1 = modify->find_fix((char *) "TLS1");
 	int iTLS2 = modify->find_fix((char *) "TLS2");
+	int iTLSl1 = modify->find_fix((char *) "TLSLat1");
+	int iTLSl2 = modify->find_fix((char *) "TLSLat2");
 
 	//If there are no corresponding fixes, returns -1 to flag the error.
 	if((iTLS1<0)||(iTLS2<0)) return -1;
@@ -278,6 +281,8 @@ int Ridge::LoadPositions()
 	//Creates a fix according to the stored fix
 	FixStore* TLS1 = (FixStore *) modify->fix[iTLS1];
 	FixStore* TLS2 = (FixStore *) modify->fix[iTLS2];
+	FixStoreLat* TLSl1 = (FixStoreLat *) modify->fix[iTLSl1];
+	FixStoreLat* TLSl2 = (FixStoreLat *) modify->fix[iTLSl2];
 
         if(me==0) std::cout << "Loading Atoms" << std::endl;
 
@@ -285,6 +290,8 @@ int Ridge::LoadPositions()
 	//CopyAtoms(atom->x,TLS1->astore);
 	pTLS1 = TLS1->astore;
 	pTLS2 = TLS2->astore;
+	lat1 = TLSl1->vstore;
+	lat2 = TLSl2->vstore;
 
 
 	//Creates FixStore for Saddle Point configuration
@@ -749,4 +756,32 @@ void Ridge::UpdateMapping()
         if (domain->triclinic) domain->lamda2x(atom->nlocal);
 
 	return;
+}
+
+void Ridge::UpdateStoredLattice(double *latVector)
+{
+        latVector[0] = domain->boxlo[0];
+        latVector[1] = domain->boxlo[1];
+        latVector[2] = domain->boxlo[2];
+        latVector[3] = domain->boxhi[0];
+        latVector[4] = domain->boxhi[1];
+        latVector[5] = domain->boxhi[2];
+        latVector[6] = domain->xy;
+        latVector[7] = domain->xz;
+        latVector[8] = domain->yz;
+        return;
+}
+
+void Ridge::UpdateWorkingLattice(double *latVector)
+{
+        domain->boxlo[0] = latVector[0];
+	domain->boxlo[1] = latVector[1];
+        domain->boxlo[2] = latVector[2];
+        domain->boxhi[0] = latVector[3];
+	domain->boxhi[1] = latVector[4];
+	domain->boxhi[2] = latVector[5];
+	domain->xy = latVector[6];
+	domain->xz = latVector[7];
+	domain->yz = latVector[8];
+        return;
 }
