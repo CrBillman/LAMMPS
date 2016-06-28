@@ -47,7 +47,7 @@ private:
 	double CallMinimize();
 	double ComputeDistance(double**,double**);
 	void BisectionFromMD(bigint, char*);
-	void UpdateLattice(double *);
+	void CopyBoxToLat(double *);
 	void WriteTLS(bigint, double**, double**, double, double);
 	void OpenTLS();
 	void TestMinimize(bigint, ReadDump*, int, char**);

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <sstream>
 #include <cmath>
+#include "comm.h"
 #include "run.h"
 #include "domain.h"
 #include "update.h"
@@ -76,13 +77,20 @@ void Ridge::PerformRidge()
 	CallMinimize();
         if(LoadPositions()<0) error->all(FLERR,"Ridge Method -- Atomic positions not stored in fix_store.");
 	InitAtomArrays();
+
 	CopyAtoms(atom->x,pTLS1);
+	CopyLatToBox(lat1);
 	eTLS1 = CallMinimize();
 	CopyAtoms(lAtoms,atom->x);
+	CopyBoxToLat(lat1);
+	CopyBoxToLat(lLat);
 	
 	CopyAtoms(atom->x,pTLS2);
+	CopyLatToBox(lat2);
 	eTLS2 = CallMinimize();
 	CopyAtoms(hAtoms,atom->x);
+	CopyBoxToLat(lat2);
+	CopyBoxToLat(hLat);
 	float chDist = ComputeDistance(lAtoms,hAtoms);
 	if(chDist<epsT)
 	{
@@ -99,6 +107,7 @@ void Ridge::PerformRidge()
 		for(int j=0; j<nBSteps;j++)
 		{
 			BisectPositions(lAtoms, hAtoms, tAtoms);
+			CopyLatToBox(tLat);
 			sFlag = CheckSaddle(tAtoms);
 			if(sFlag)
 			{
@@ -156,109 +165,11 @@ void Ridge::BisectPositions(double** pos1, double** pos2, double** posOut)
 		}
 	}
 
-	return;
-}
-
-void Ridge::TestBisect()
-{
-	double** ar1 = InitAtomArray();
-	double** ar2 = InitAtomArray();
-	double** ar3 = InitAtomArray();
-	double tol = 1E-6;
-        int me;
-	int m;
-	bool failFlag = false;
-        MPI_Comm_rank(world,&me);
-
-	//Simple test, should only fail if arrays are incorrectly built, or if something is accessing memory where it shouldn't.  This test checks if the bisected between 0 is 0.
-	for(int i=0;i<atom->natoms;i++)
+	for(int i=0;i<9;i++)
 	{
-		for(int j=0;j<domain->dimension;j++)
-		{
-			ar1[i][j] = 0.0;
-			ar2[i][j] = 0.0;
-		}
+		tLat[i] = 0.5*(hLat[i]+lLat[i]);
+		if(comm->me==0) std::cout << "Bisect: " << i << tLat[i] << std::endl;
 	}
-
-	BisectPositions(ar1, ar2, ar3);
-	for(int i=1;i<=atom->natoms;i++)
-	{
-		for(int j=0;j<domain->dimension;j++)
-		{
-			m = atom->map(i);
-			//if (mask[m]) {
-			if(m>=0 && m<atom->nlocal)
-			{
-				if(ar3[m][0]>tol)
-				{
-					if(me==0) fprintf(logfile,"BisectPosition fails first test, on value %d,%d\n",m,j);
-					failFlag = true;
-					break;
-				}
-			}
-		}
-		if(failFlag) break;
-	}
-	if(me==0 && !failFlag) fprintf(logfile,"BisectPosition passed first test.\n");
-
-	//This test checks for a simple bisection.  It sets the position of the first atom in ar2 array to 1.0 in each direction.  As the position in ar1 is 0.0, it should return 0.5 in each 
-	//direction for that element.
-	failFlag = false;
-	for(int j=0;j<domain->dimension;j++)
-	{
-		ar2[0][j] = 1.0;
-	}
-
-	BisectPositions(ar1, ar2, ar3);	
-	for(int j=0;j<domain->dimension;j++)
-	{
-		if((ar3[0][j]-0.5)>tol)
-		{
-			if(me==0) fprintf(logfile,"BisectPosition fails second test, in dimension %d, where value is %f\n",j,ar3[0][j]);
-			failFlag = true;
-		}
-		break;
-	}
-	if(me==0 && !failFlag) fprintf(logfile,"BisectPosition passed second test.\n");
-
-	//This checks for the literal edge case where atoms are placed at the outside edges of the unit cell.  A naive bisection would put the atom here in the center of the unit cell.
-	//However, their true difference is 0, so a bisection shouldn't shift them.
-	for(int i=1;i<=atom->natoms;i++)
-	{
-		m = atom->map(i);
-		//if (mask[m]) {
-		if(m>=0 && m<atom->nlocal)
-		{
-			for(int j=0;j<domain->dimension;j++)
-			{       
-				ar1[m][j] = -(domain->prd_half[j]);
-				ar2[m][j] = domain->prd_half[j];
-			}
-		}
-        }   
-
-	BisectPositions(ar1, ar2, ar3);
-	
-	failFlag = false;
-	for(int i=1;i<=atom->natoms;i++)
-        {
-		m = atom->map(i);
-		//if (mask[m]) {
-		if(m>=0 && m<atom->nlocal)
-		{
-			for(int j=0;j<domain->dimension;j++)
-			{
-				if((ar3[m][j]-domain->prd_half[j])>tol)
-				{
-					if(me==0) fprintf(logfile,"BisectPosition fails third test, at index %d,%d with value %f\n",m,j,ar3[m][j]);
-					failFlag = true;
-					break;
-				}
-			}
-		}
-		if(failFlag) break;
-        }
-	if(me==0 && !failFlag) fprintf(logfile,"BisectPosition passed third test.\n");
 
 	return;
 }
@@ -292,6 +203,7 @@ int Ridge::LoadPositions()
 	pTLS2 = TLS2->astore;
 	lat1 = TLSl1->vstore;
 	lat2 = TLSl2->vstore;
+	for(int i=0; i<9;i++) std::cout << lat1[i] << "\t" << lat2[i] << std::endl;
 
 
 	//Creates FixStore for Saddle Point configuration
@@ -310,6 +222,13 @@ int Ridge::LoadPositions()
         FixStore *TLSs = (FixStore *) modify->fix[iTLSs];
         CopyAtoms(TLSs->astore,pTLS1);
 	pTLSs = TLSs->astore;
+
+        newarg[0] = (char *) "TLSLatS";
+        newarg[2] = (char *) "STORELAT";
+        modify->add_fix(3,newarg);
+        int iTLSlS = modify->find_fix((char *) "TLSLatS");
+        FixStoreLat *TLSlS = (FixStoreLat *) modify->fix[iTLSlS];
+        latS = TLSlS->vstore;
 
 	MPI_Barrier(world);
 
@@ -405,12 +324,17 @@ void Ridge::WriteTLS(double E1, double E2, double E3)
 	WriteDump* pDump = new WriteDump(lmp);
 	update->reset_timestep(0);
 	CopyAtoms(atom->x,pTLS1);
+	CopyLatToBox(lat1);
+	UpdateMapping();
 	pDump->command(8,dumparg);
 	update->reset_timestep(1);
 	CopyAtoms(atom->x,pTLS2);
+	CopyLatToBox(lat2);
+	UpdateMapping();
 	pDump->command(8,dumparg);
 	update->reset_timestep(2);
         CopyAtoms(atom->x,pTLSs);
+	CopyLatToBox(latS);
         pDump->command(8,dumparg);
 	
 	delete dumparg;
@@ -462,6 +386,8 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
         MPI_Comm_rank(world,&me);
 
 	CopyAtoms(atom->x,tAtoms);
+	CopyLatToBox(tLat);
+	UpdateMapping();
 	CallMinimize();
 	tEnergy = update->minimize->einitial;
 
@@ -471,17 +397,21 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 	if((lDistDiff<epsT) && (lDistDiff<hDistDiff))
 	{
 		CopyAtoms(lAtoms,tAtoms);
+		CopyLatToLat(lLat, tLat);
 		if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): V1 = %f, V2 = %f \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2);
 	}
 	else if(hDistDiff<epsT)
 	{
 		CopyAtoms(hAtoms,tAtoms);
+		CopyLatToLat(hLat, tLat);
 		if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): V1 = %f, V2 = %f \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2);
 	}
 	else
 	{
 		CopyAtoms(hAtoms,tAtoms);
+		CopyLatToLat(hLat, tLat);
 		CopyAtoms(pTLS2, atom->x);
+		CopyBoxToLat(lat2);
 		eTLS2 = tEnergy;
 		if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f): V1 = %f, V2 = %f \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2);
 	}
@@ -531,82 +461,6 @@ double Ridge::ComputeDistance(double** pos1, double** pos2)
         MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
         if(finMassDist[1]<1e-6) return 0.0;
         return finMassDist[0]/finMassDist[1];
-}
-
-void Ridge::TestComputeDistance()
-{
-        double** Atoms1 = InitAtomArray();
-        double** Atoms2 = InitAtomArray();
-	double Diff = 0.0;
-	double* m = atom->mass;
-	int* type = atom->type;
-	double MassTot = 0.0;
-	int me;
-        MPI_Comm_rank(world,&me);
-
-	//First test sets the position of every atom in Atoms1 to {0,0,0} and Atoms2 to {1,1,1}.  If the difference is being calculated correctly, Diff should be sqrt(3).
-	for(int i=0;i<atom->natoms;i++)
-	{
-		for(int j=0;j<domain->dimension;j++)
-		{
-			Atoms1[i][j] = 0.0;
-			Atoms2[i][j] = 1.0;
-		}
-	}
-
-	Diff = ComputeDistance(Atoms1, Atoms2);
-	if(fabs(sqrt(3)-Diff)<1E-3)
-	{
-		if(me==0) fprintf(screen, "ComputeDistance passes test 1.\n");
-	}
-	else
-	{
-		if(me==0) fprintf(screen, "Computedifference fails test 1.  Expected Diff==%f, but got %f.\n",sqrt(3), Diff);
-	}
-	
-	//Second test sets the positions in both Atoms arrays to {0,0,0}, except a single entry in Atoms2, which is set to {1,0,0}.  This is to test the mass weighting.
-        for(int i=0;i<atom->natoms;i++)
-        {
-		MassTot = MassTot + m[type[i]];
-                for(int j=0;j<domain->dimension;j++)
-                {
-                        Atoms2[i][j] = 0.0;
-                }
-        }
-
-	if(me==0) Atoms2[0][0] = 1;
-        Diff = ComputeDistance(Atoms1, Atoms2);
-        if(fabs(sqrt(m[type[0]]/MassTot)-Diff)<1E-3)
-        {
-                if(me==0) fprintf(screen, "ComputeDistance passes test 2.\n");
-        }
-        else
-        {
-                if(me==0) fprintf(screen, "Computedifference fails test 2.  Expected Diff==%f, but got %f.\n", sqrt(m[type[0]]/MassTot), Diff);
-        }
-
-	//Third test sets the positions to be at the edges of the unit cell.  This should give 0 displacement if the edges are treated correctly.
-	if(me==0)
-	{
-		for(int j=0;j<domain->dimension;j++)
-		{
-			Atoms1[0][j] = -(domain->prd_half[j]);
-			Atoms2[0][j] = domain->prd_half[j];
-		}
-	}
-
-        Diff = ComputeDistance(Atoms1, Atoms2);
-        if(fabs(Diff)<1E-3)
-        {
-                if(me==0) fprintf(screen, "ComputeDistance passes test 3.\n");
-        }
-        else
-        {
-                if(me==0) fprintf(screen, "Computedifference fails test 3.  Expected Diff==%f, but got %f.\n", 0.0, Diff);
-        }
-
-	DeleteAtomArray(Atoms1);
-	DeleteAtomArray(Atoms2);
 }
 
 double Ridge::CallMinimize()
@@ -741,6 +595,18 @@ void Ridge::InitAtomArrays()
 	int iTLSt = modify->find_fix((char *) "TLSt");
         FixStore *TLSt = (FixStore *) modify->fix[iTLSt];
         tAtoms = TLSt->astore;
+
+	//These lattice arrays are only used locally and don't need to be communicated across processors, so it isn't necessary to store them in a FixStoreLat object.  
+	hLat = lLat = tLat = NULL;
+	memory->grow(hLat,9,"ridge:hLat");
+	memory->grow(lLat,9,"ridge:lLat");
+	memory->grow(tLat,9,"ridge:tLat");
+	//Initialize the values in the array to 0.0
+	for(int i=0;i<9;i++)
+	{
+		hLat[i] = lLat[i] = tLat[i] = 0.0;
+	}
+	
         return;
 }
 
@@ -758,7 +624,7 @@ void Ridge::UpdateMapping()
 	return;
 }
 
-void Ridge::UpdateStoredLattice(double *latVector)
+void Ridge::CopyBoxToLat(double *latVector)
 {
         latVector[0] = domain->boxlo[0];
         latVector[1] = domain->boxlo[1];
@@ -772,7 +638,7 @@ void Ridge::UpdateStoredLattice(double *latVector)
         return;
 }
 
-void Ridge::UpdateWorkingLattice(double *latVector)
+void Ridge::CopyLatToBox(double *latVector)
 {
         domain->boxlo[0] = latVector[0];
 	domain->boxlo[1] = latVector[1];
@@ -783,5 +649,25 @@ void Ridge::UpdateWorkingLattice(double *latVector)
 	domain->xy = latVector[6];
 	domain->xz = latVector[7];
 	domain->yz = latVector[8];
+
+	ResetBox();
+	UpdateMapping();
+
         return;
+}
+
+void Ridge::CopyLatToLat(double *copyArray, double *templateArray)
+{
+	for(int i=0; i<9; i++)
+	{
+		copyArray[i] = templateArray[i];
+	}
+	return;
+}
+
+void Ridge::ResetBox()
+{
+	domain->set_initial_box();
+	domain->set_global_box();
+	domain->set_local_box();
 }

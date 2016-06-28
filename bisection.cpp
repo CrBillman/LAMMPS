@@ -142,7 +142,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//Minimizes the first atomic configuration from the dump file and then stores the energy in lEnergyMin.
 	lEnergyMin = CallMinimize();
 	CopyAtoms(lAtoms,atom->x);
-	UpdateLattice(lat1);
+	CopyBoxToLat(lat1);
 
         //Updates readInput to go to point toward the current step, and updates the current step to be the last step in the trajectory.  
         //Then, loads and minimizes that atomic configuration from the dump file and then stores the energy in hEnergyMin.	
@@ -151,7 +151,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	bisRead->command(nInput, readInput);
 	hEnergyMin = CallMinimize();
 	CopyAtoms(hAtoms,atom->x);
-	UpdateLattice(lat2);
+	CopyBoxToLat(lat2);
 
 	//Checks the mass-weighted distance between the minimized configurations of the first and last timesteps of the trajectory.  If they are in the same minimum (ie, the mw distance is smaller than the cut-off), then it is unlikely that a TLS
 	//will be found in the trajectory.  If matchExit is true, the bisection method is exited at this point.  If false, it only outputs a warning.	
@@ -178,7 +178,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		{
 			lowerStep = intCurrStep;
 			CopyAtoms(lAtoms, atom->x);
-			UpdateLattice(lat1);
+			CopyBoxToLat(lat1);
 			lEnergyMin = tEnergyMin;
 			if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, intCurrStep, higherStep);
@@ -188,7 +188,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			{
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, atom->x);
-				UpdateLattice(lat2);
+				CopyBoxToLat(lat2);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, hDistDiff, lowerStep, intCurrStep);
@@ -196,7 +196,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			else{
 				higherStep = intCurrStep;
 				CopyAtoms(hAtoms, atom->x);
-				UpdateLattice(lat2);
+				CopyBoxToLat(lat2);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, hDistDiff, lowerStep, intCurrStep);
@@ -421,7 +421,7 @@ void Bisection::ConvertIntToChar(char *copy, int n)
         return;
 }
 
-void Bisection::UpdateLattice(double *latVector)
+void Bisection::CopyBoxToLat(double *latVector)
 {
 	latVector[0] = domain->boxlo[0];
 	latVector[1] = domain->boxlo[1];
