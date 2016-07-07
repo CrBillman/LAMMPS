@@ -29,26 +29,31 @@ namespace LAMMPS_NS {
 class Ridge : protected Pointers {
 private:
 	FILE *fp;
+	bool flipFlag;
         int nRSteps;
         int nBSteps;
 	int nPRelSteps;
 	int nMRelSteps;
+	int prevMatch;
+	int maxAlphaSteps;
         double epsT, epsF;
 	double eTLS1, eTLS2;
 	double **pTLS1, **pTLS2, **pTLSs;
 	double *lat1, *lat2, *latS;
 	double **hAtoms, **lAtoms, **tAtoms;
 	double *hLat, *lLat, *tLat;
-	void PerformRidge();
+	double prevForce;
+
 	int LoadPositions();
+	int InitHessianCompute();
+	double** InitAtomArray();
+        double CallMinimize();
+        double ComputeDistance(double **,double **);
+	void PerformRidge();
 	void ReadPositions();
         void CopyAtoms(double **, double **);
 	void ComparePositions(double **, double **, double **);
-        double** InitAtomArray();
         void DeleteAtomArray(double **);
-        double CallMinimize();
-        double ComputeDistance(double **,double **);
-	int InitHessianCompute();
 	void CopyLatToBox(double *);
 	void CopyBoxToLat(double *);
 	void CopyLatToLat(double *, double *);
@@ -63,7 +68,9 @@ private:
 	void UpdateMapping();
 	void InitAtomArrays();
 	void ResetBox();
+	void MinimizeForces(double **);
 	bool CheckSaddle(double **);
+	bool CheckMinimum();
 public:
 	Ridge(class LAMMPS *);
 	void command(int, char **);

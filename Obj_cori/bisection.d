@@ -125,5 +125,5 @@ bisection.o: ../bisection.cpp /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/c++/4.3/bits/stl_map.h /usr/include/c++/4.3/bits/stl_multimap.h \
  ../integrate.h ../modify.h ../output.h ../finish.h ../input.h ../timer.h \
  ../error.h ../bisection.h ../read_dump.h ../read_dump.h ../memory.h ../min.h \
- ../minimize.h ../atom.h ../fix.h ../fix_store.h ../dump.h \
+ ../minimize.h ../atom.h ../fix.h ../fix_store.h ../fix_store_lat.h ../dump.h \
  /usr/include/c++/4.3/iostream ../write_restart.h

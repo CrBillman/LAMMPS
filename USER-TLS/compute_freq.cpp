@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-/* Coded by Jonathan Trinastic, University of Florida 1/21/2016---------- */
+/* Coded by Jonathan Trinastic, University of Florida 6/30/2016---------- */
 
 #include <iostream>
 #include "compute_freq.h"
@@ -210,15 +210,15 @@ void ComputeFreq::compute_array()
     m = atom->map(i);
     if (mask[m] & groupbit) {
       hess_index1 = atom->tag[m] - 1;
-      MPI_Bcast (&hess_index1, 1, MPI_DOUBLE, comm->me, world);
+      MPI_Bcast (&hess_index1, 1, MPI_DOUBLE, 0, world);
     
       // Obtain mass of atom i (from compute_ke.cpp)
       if (rmass) {
 	mass1 = rmass[m];
-	MPI_Bcast (&mass1, 1, MPI_DOUBLE, comm->me, world);
+	MPI_Bcast (&mass1, 1, MPI_DOUBLE, 0, world);
       } else {
 	mass1 = mass[type[m]];
-	MPI_Bcast (&mass1, 1, MPI_DOUBLE, comm->me, world);
+	MPI_Bcast (&mass1, 1, MPI_DOUBLE, 0, world);
       }
     }
     
