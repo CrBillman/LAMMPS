@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-/* Coded by Jonathan Trinastic, University of Florida 1/21/2016---------- */
+/* Coded by Jonathan Trinastic, University of Florida 6/30/2016---------- */
 
 #include <iostream>
 #include <string.h>
@@ -65,8 +65,6 @@ CoupleElastic::CoupleElastic(LAMMPS *lmp) : Pointers(lmp)
 
 CoupleElastic::~CoupleElastic()
 {
-  memory->destroy(oTLS);
-  memory->destroy(oLat);
   memory->destroy(strainTLS);
   memory->destroy(energyTLS);
   memory->destroy(stressTLS);
@@ -100,8 +98,6 @@ void CoupleElastic::command(int narg, char **arg)
   strcpy(fitType,arg[1]);
 
   /* initialize arrays and values */
-  oTLS = NULL;
-  oLat = NULL;
   strainTLS = NULL;
   energyTLS = NULL;
   stressTLS = NULL;
@@ -128,14 +124,6 @@ void CoupleElastic::command(int narg, char **arg)
     atom->map_set();
   }
 
-  /* Check if fix box/relax on, turn off if it is */
-  /* TO DO */
-  // Loop through all modify->fix to find box_rleax
-  //for (int i = 0; i < modify->nfix; i++)
-  // { 
-  //    if (modify->fix[i]->rigid_flag) nrigid++;
-  //  }
-
   /* Initialize pressure compute to use later */
   InitPressCompute();
 
@@ -147,19 +135,8 @@ void CoupleElastic::command(int narg, char **arg)
       if (i == 0){numTLS = "1";}
       if (i == 1){numTLS = "2";}
 
-      // Load atomic positions of TLS
+      // Load atomic positions of TLS and lattice
       LoadPositions(numTLS);
-
-      // Load box parameters
-      /* TO DO */
-        
-      // Store lattice of current TLS
-      CopyBoxToLat(oLat);  
-
-      std::cout << "Lattice: " << std::endl;
-      std::cout << oLat[0][0] << " " << oLat[0][1] << " " << oLat[0][2] << std::endl;
-      std::cout << oLat[1][0] << " " << oLat[1][1] << " " << oLat[1][2] << std::endl;
-      std::cout << oLat[2][0] << " " << oLat[2][1] << " " << oLat[2][2] << std::endl;
 
       // Apply strain and calculate changes in energy and stress tensor
       for (int j =0; j < 6; j++)
@@ -174,13 +151,8 @@ void CoupleElastic::command(int narg, char **arg)
 	  // Loop over strain intervals
 	  for (int k = 0; k < (2 * numStrain + 1); k++)
 	    {
-	      // Load original TLS positions
+	      // Load original TLS positions and lattice
 	      LoadPositions(numTLS);
-
-	      std::cout << "Lattice: " << std::endl;
-	      std::cout << oLat[0][0] << " " << oLat[0][1] << " " << oLat[0][2] << std::endl;
-	      std::cout << oLat[1][0] << " " << oLat[1][1] << " " << oLat[1][2] << std::endl;
-	      std::cout << oLat[2][0] << " " << oLat[2][1] << " " << oLat[2][2] << std::endl;
 
 	      // Calculate strain amount for given interval step
 	      // Starts from maximum negative strain, works up
@@ -206,9 +178,6 @@ void CoupleElastic::command(int narg, char **arg)
 	      stressTLS[i][j][k][3] = pressure->vector[3];
 	      stressTLS[i][j][k][4] = pressure->vector[4];
 	      stressTLS[i][j][k][5] = pressure->vector[5];
-
-	      // Undo strain
-	      UndoStrain(oLat);
 
 	    } 
 	}
@@ -305,9 +274,6 @@ void CoupleElastic::command(int narg, char **arg)
   // Delete pressure compute used just for these calculations
   modify->delete_compute("cc_ec");
 
-  // Turn on fix_box_relax if originally on before these calculations
-  /* TO DO */
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -329,12 +295,46 @@ int CoupleElastic::LoadPositions(char *num)
   int iTLS = modify->find_fix(TLSname);
 
   //If there are no corresponding fixes, returns -1 to flag the error.
-  if(iTLS<0)
+  if(iTLS < 0)
     error->all(FLERR, "TLS stored state not found");
 
   //Creates a fix according to the stored fix
   FixStore * TLS = (FixStore *) modify->fix[iTLS];
   CopyAtoms(x, TLS->astore);
+
+  // Create name of FixStoreLat to look for
+  int m = strlen("TLSLat") + 1;
+  char * LATname = new char[m];
+  strcpy(LATname, "TLSLat");
+  strcat(LATname, num);
+  if(comm->me == 0)
+    {
+      std::cout << "Loading " << LATname << std::endl;
+    }
+
+  // Get the labels for the fix containing TLS lattice
+  int iTLSl = modify->find_fix(LATname);
+
+  // If no corresponding fix, return -1 to flag the error
+  if(iTLSl < 0)
+    error->all(FLERR, "TLSLat stored state not found");
+
+  // Creates a fix for lattice and update box dimensions
+  FixStore * TLSl = (FixStore *) modify->fix[iTLSl];
+  domain->boxlo[0] = TLSl->vstore[0];
+  domain->boxlo[1] = TLSl->vstore[1];
+  domain->boxlo[2] = TLSl->vstore[2];
+  domain->boxhi[0] = TLSl->vstore[3];
+  domain->boxhi[1] = TLSl->vstore[4];
+  domain->boxhi[2] = TLSl->vstore[5];
+  domain->xy = TLSl->vstore[6];
+  domain->xz = TLSl->vstore[7];
+  domain->yz = TLSl->vstore[8];
+
+  // Initialize, then set global and local box to reset original
+  domain->set_initial_box();
+  domain->set_global_box();
+  domain->set_local_box();
 
   return 0;
 }
@@ -396,25 +396,13 @@ void CoupleElastic::ApplyStrain(char * dir, char * strain)
     }
 }
 
-/* -- Function to undo strain after energy, stress tensor calculation --*/
-void CoupleElastic::UndoStrain(double ** lattice)
-{
-  // Copy original lattice to boxlo, boxhi, and tilt factors
-  CopyLatToBox(lattice);
-
-  // Initialize, then set global and local box to reset original
-  domain->set_initial_box();
-  domain->set_global_box();
-  domain->set_local_box();
-}
-
 /* ---------------------------------------------------------------------- */
 
 double CoupleElastic::CallMinimize()
 {
   char **newarg = new char*[4];
   newarg[0] = (char *) "0";
-  newarg[1] = (char *) "1.0e-8";
+  newarg[1] = (char *) "1.0e-5";
   newarg[2] = (char *) "10000";
   newarg[3] = (char *) "10000";
   Minimize* rMin = new Minimize(lmp);
@@ -429,8 +417,7 @@ double CoupleElastic::CallMinimize()
 
 void CoupleElastic::InitPressCompute()
 {
-  int icompute = 1;
-  pressure = modify->compute[icompute];
+  //pressure = modify->compute[icompute];
 
   // Create pressure compute
   // Default: virial to not take temp into account
@@ -440,7 +427,10 @@ void CoupleElastic::InitPressCompute()
   newarg[2] = (char *) "pressure";
   newarg[3] = (char *) "NULL";
   newarg[4] = (char *) "virial";
+
   modify->add_compute(5,newarg);
+  int icompute = modify->find_compute("cc_ec");
+  pressure = modify->compute[icompute];
 
   delete [] newarg;
 }
@@ -561,36 +551,6 @@ void CoupleElastic::CopyAtoms(double** copyArray, double** templateArray)
 
 /* ---------------------------------------------------------------------- */
 
-void CoupleElastic::CopyBoxToLat(double ** latArray)
-{
-  latArray[0][0] = domain->boxlo[0];
-  latArray[0][1] = domain->boxlo[1];
-  latArray[0][2] = domain->boxlo[2];
-  latArray[1][0] = domain->boxhi[0];
-  latArray[1][1] = domain->boxhi[1];
-  latArray[1][2] = domain->boxhi[2];
-  latArray[2][0] = domain->xy;
-  latArray[2][1] = domain->xz;
-  latArray[2][2] = domain->yz;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void CoupleElastic::CopyLatToBox(double ** latArray)
-{
-  domain->boxlo[0] = latArray[0][0];
-  domain->boxlo[1] = latArray[0][1];
-  domain->boxlo[2] = latArray[0][2];
-  domain->boxhi[0] = latArray[1][0];
-  domain->boxhi[1] = latArray[1][1];
-  domain->boxhi[2] = latArray[1][2];
-  domain->xy = latArray[2][0];
-  domain->xz = latArray[2][1];
-  domain->yz = latArray[2][2];
-}
-
-/* ---------------------------------------------------------------------- */
-
 void CoupleElastic::ConvertDoubleToChar(double doubleInput, char * charOutput)
 {
   sprintf(charOutput, "%1f", doubleInput);
@@ -653,10 +613,6 @@ void CoupleElastic::force_clear()
 
 void CoupleElastic::allocate(int nStrain)
 {
-  memory->destroy(oTLS);
-  memory->create(oTLS,atom->natoms,3,"couple_elastic:oTLS");
-  memory->destroy(oLat);
-  memory->create(oLat,3,3,"couple_elast:oLat");
   memory->destroy(strainTLS);
   memory->create(strainTLS,6,2*nStrain+1,"couple_elastic:strainTLS");
   memory->destroy(energyTLS);

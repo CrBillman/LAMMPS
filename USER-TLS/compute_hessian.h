@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-/*--Coded by Jonathan Trinastic, University of Florida 1/21/2016--------- */
+/*--Coded by Jonathan Trinastic, University of Florida 6/30/2016--------- */
 
 #ifdef COMPUTE_CLASS
 

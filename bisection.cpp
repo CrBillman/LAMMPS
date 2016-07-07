@@ -138,10 +138,11 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//Creates a ReadDump class, and then has it read the appropriate timestep, using the parsed readInput.
 	ReadDump *bisRead = new ReadDump(lmp);
 	bisRead->command(nInput, readInput);
+	CopyAtoms(lAtoms,atom->x);
 
 	//Minimizes the first atomic configuration from the dump file and then stores the energy in lEnergyMin.
 	lEnergyMin = CallMinimize();
-	CopyAtoms(lAtoms,atom->x);
+	CopyAtoms(m1Atoms,atom->x);
 	CopyBoxToLat(lat1);
 
         //Updates readInput to go to point toward the current step, and updates the current step to be the last step in the trajectory.  
@@ -149,13 +150,16 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	readInput[1] = &charCurrStep[0];
 	intCurrStep = UpdateDumpArgs(nsteps, charCurrStep);
 	bisRead->command(nInput, readInput);
-	hEnergyMin = CallMinimize();
 	CopyAtoms(hAtoms,atom->x);
+	hEnergyMin = CallMinimize();
+	CopyAtoms(m2Atoms,atom->x);
 	CopyBoxToLat(lat2);
 
 	//Checks the mass-weighted distance between the minimized configurations of the first and last timesteps of the trajectory.  If they are in the same minimum (ie, the mw distance is smaller than the cut-off), then it is unlikely that a TLS
 	//will be found in the trajectory.  If matchExit is true, the bisection method is exited at this point.  If false, it only outputs a warning.	
-	if(ComputeDistance(lAtoms,hAtoms)<epsT)
+	double initialDistance = ComputeDistance(m1Atoms,m2Atoms);
+	if(me==0) fprintf(screen,"UPDATE-Initial Mass-Weighted Distance is %f\n", initialDistance);
+	if(initialDistance<epsT/3.0)
 	{
 		if(matchExit) 
 		{
@@ -170,15 +174,17 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		intCurrStep = UpdateDumpArgs((higherStep-lowerStep)/2+lowerStep,charCurrStep);
 		bisRead->command(nInput, readInput);
 		CopyAtoms(tAtoms,atom->x);
+		CopyBoxToLat(tLat);
 		tEnergyMin = CallMinimize();
 		eDiff = fabs(tEnergyMin-lEnergyMin);
-		lDistDiff = ComputeDistance(lAtoms,atom->x); 
-		hDistDiff = ComputeDistance(hAtoms,atom->x);
+		lDistDiff = ComputeDistance(m1Atoms,atom->x); 
+		hDistDiff = ComputeDistance(m2Atoms,atom->x);
 		if((lDistDiff<hDistDiff)&&(lDistDiff<epsT))
 		{
 			lowerStep = intCurrStep;
-			CopyAtoms(lAtoms, atom->x);
-			CopyBoxToLat(lat1);
+			CopyAtoms(lAtoms, tAtoms);
+			CopyLatToLat(lat1,tLat);
+			CopyAtoms(m1Atoms,atom->x);
 			lEnergyMin = tEnergyMin;
 			if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, intCurrStep, higherStep);
@@ -187,16 +193,18 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 			if(hDistDiff<epsT)
 			{
 				higherStep = intCurrStep;
-				CopyAtoms(hAtoms, atom->x);
-				CopyBoxToLat(lat2);
+				CopyAtoms(hAtoms, tAtoms);
+				CopyLatToLat(lat2, tLat);
+				CopyAtoms(m2Atoms,atom->x);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, hDistDiff, lowerStep, intCurrStep);
 			}
 			else{
 				higherStep = intCurrStep;
-				CopyAtoms(hAtoms, atom->x);
-				CopyBoxToLat(lat2);
+				CopyAtoms(hAtoms, tAtoms);
+				CopyLatToLat(lat2, tLat);
+				CopyAtoms(m2Atoms,atom->x);
 				hEnergyMin = tEnergyMin;
 				if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f, %f): lower=" BIGINT_FORMAT ", higher=" BIGINT_FORMAT "\n", lEnergyMin,
                                         hEnergyMin, lDistDiff, hDistDiff, lowerStep, intCurrStep);
@@ -206,12 +214,13 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	}
 
 	eDiff = fabs(hEnergyMin-lEnergyMin);
-	WriteTLS(intCurrStep,lAtoms,hAtoms,lEnergyMin,hEnergyMin);
+	WriteTLS(intCurrStep,m1Atoms,m2Atoms,lEnergyMin,hEnergyMin);
 
 	//Deletes readInput and atom arrays, to prevent memory leaks.
 	
 	delete bisRead;
 	delete readInput;
+	delete tLat;
 	if(me==0) fclose(fp);
 	modify->delete_fix((char *) "TLSt");
 
@@ -294,7 +303,7 @@ double Bisection::ComputeDistance(double** pos1, double** pos2)
 	double atomDist;
         double diff;
         double mTot = 0.0;
-	double distCriteria = 0.01;
+	double distCriteria = 0.00;
         double* m = atom->mass;
         int* type = atom->type;
         int me;
@@ -344,7 +353,7 @@ void Bisection::OpenTLS()
 void Bisection::WriteTLS(bigint step, double** x1, double** x2, double E1, double E2)
 {
 	double dist = ComputeDistance(x1,x2);
-	double Ediff = E2 - E1;
+	double Ediff = fabs(E2 - E1);
 	int me;
 	MPI_Comm_rank(world, &me);
 	if(me==0) fprintf(fp, "Bisection: "BIGINT_FORMAT "\t%f\t%f \n", step, Ediff, dist);
@@ -383,6 +392,19 @@ void Bisection::InitAtomArrays()
 	FixStore *tTLS = (FixStore *) modify->fix[iTLSt];
 	tAtoms = tTLS->astore;
 
+//Adds arrays for min1 and min2 atom positions
+	newarg[0] = (char *) "TLSm1";
+        modify->add_fix(5,newarg);
+        int iTLSm1 = modify->find_fix((char *) "TLSm1");
+        FixStore *TLSm1 = (FixStore *) modify->fix[iTLSm1];
+        m1Atoms = TLSm1->astore;
+
+        newarg[0] = (char *) "TLSm2";
+        modify->add_fix(5,newarg);
+        int iTLSm2 = modify->find_fix((char *) "TLSm2");
+        FixStore *TLSm2 = (FixStore *) modify->fix[iTLSm2];
+        m2Atoms = TLSm2->astore;
+
 //Adds fixes for lattice storage.
 	newarg[0] = (char *) "TLSLat1";
 	newarg[2] = (char *) "STORELAT";
@@ -396,6 +418,14 @@ void Bisection::InitAtomArrays()
         int iTLSl2 = modify->find_fix((char *) "TLSLat2");
         FixStoreLat *TLSl2 = (FixStoreLat *) modify->fix[iTLSl2];
         lat2 = TLSl2->vstore;
+
+        tLat = NULL;
+        memory->grow(tLat,9,"ridge:tLat");
+	for(int i=0;i<9;i++)
+	{
+		tLat[i] = 0.0;
+	}
+
 	return;
 }
 
@@ -433,4 +463,13 @@ void Bisection::CopyBoxToLat(double *latVector)
 	latVector[7] = domain->xz;
 	latVector[8] = domain->yz;
 	return;
+}
+
+void Bisection::CopyLatToLat(double *copyArray, double *templateArray)
+{
+        for(int i=0; i<9; i++)
+        {
+                copyArray[i] = templateArray[i];
+        }
+        return;
 }

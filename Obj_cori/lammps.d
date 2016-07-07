@@ -181,7 +181,7 @@ lammps.o: ../lammps.cpp /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
  ../pair_hbond_dreiding_lj.h ../pair_hbond_dreiding_morse.h \
  ../pair_hbond_dreiding_lj.h ../pair_hybrid.h ../pair_hybrid_overlay.h \
  ../pair_hybrid.h ../pair_lcbop.h \
- /opt/intel/composer_xe_2015.1.133/compiler/include/math.h ../pair_lj246.h \
+ /opt/intel/composer_xe_2015.1.133/compiler/include/math.h ../pair_lj246_cut.h \
  ../pair_lj96_cut.h ../pair_lj_charmm_coul_charmm.h \
  ../pair_lj_charmm_coul_charmm_implicit.h ../pair_lj_charmm_coul_charmm.h \
  ../pair_lj_charmm_coul_long.h ../pair_lj_charmm_coul_msm.h \
@@ -219,7 +219,7 @@ lammps.o: ../lammps.cpp /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
  ../pair_coul_wolf.h ../pair_dpd.h ../pair_dpd_tstat.h ../pair_eam.h \
  ../pair_eam_alloy.h ../pair_eam_fs.h ../pair_eim.h ../pair_gauss.h \
  ../pair_hbond_dreiding_lj.h ../pair_hbond_dreiding_morse.h ../pair_hybrid.h \
- ../pair_hybrid_overlay.h ../pair_lcbop.h ../pair_lj246.h ../pair_lj96_cut.h \
+ ../pair_hybrid_overlay.h ../pair_lcbop.h ../pair_lj246_cut.h ../pair_lj96_cut.h \
  ../pair_lj_charmm_coul_charmm.h ../pair_lj_charmm_coul_charmm_implicit.h \
  ../pair_lj_charmm_coul_long.h ../pair_lj_charmm_coul_msm.h ../pair_lj_cubic.h \
  ../pair_lj_cut.h ../pair_lj_cut_coul_cut.h ../pair_lj_cut_coul_debye.h \
