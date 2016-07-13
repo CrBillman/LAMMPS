@@ -43,12 +43,14 @@ private:
 	double **hAtoms, **lAtoms, **tAtoms;
 	double *hLat, *lLat, *tLat;
 	double prevForce;
+	double dmax;
 
 	int LoadPositions();
 	int InitHessianCompute();
 	double** InitAtomArray();
         double CallMinimize();
         double ComputeDistance(double **,double **);
+	double ComputeForce(double **);
 	void PerformRidge();
 	void ReadPositions();
         void CopyAtoms(double **, double **);
@@ -65,6 +67,7 @@ private:
 	void ToAtomMapping(double **);
 	void PartialRelax(double **, double **);
 	void ConvertIntToChar(char *, int);
+	void ConvertDoubleToChar(char *, double);
 	void UpdateMapping();
 	void InitAtomArrays();
 	void ResetBox();

@@ -24,7 +24,7 @@ class Timer : protected Pointers {
 
   enum ttype  {RESET=-2,START=-1,TOTAL=0,PAIR,BOND,KSPACE,NEIGH,COMM,
                MODIFY,OUTPUT,SYNC,ALL,DEPHASE,DYNAMICS,QUENCH,NEB,REPCOMM,
-               REPOUT,NUM_TIMER};
+               REPOUT,NUM_TIMER,RIDGE};
   enum tlevel {OFF=0,LOOP,NORMAL,FULL};
 
   Timer(class LAMMPS *);
