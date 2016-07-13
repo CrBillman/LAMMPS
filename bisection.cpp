@@ -164,6 +164,8 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		if(matchExit) 
 		{
 			if(me==0) fprintf(screen,"UPDATE-Exiting bisection, as end-points for bisection have same minimum.\n");
+			modify->delete_fix((char *) "TLS1");
+			modify->delete_fix((char *) "TLS2");
 			return;
 		}
 		if(me==0) fprintf(screen,"UPDATE-End-points for bisection have same minimum.  Bisection may fail.\n");

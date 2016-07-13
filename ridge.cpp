@@ -50,6 +50,7 @@ Ridge::Ridge(LAMMPS *lmp) : Pointers(lmp) {
 	nPRelSteps = 6;
 	nMRelSteps = 1000;
 	maxAlphaSteps = 5;                              //The maximum number of addition minimizations to do because of the 'alpha linsearch' stopping condition.  For larger values, it helps the minimization actually move toward the true minimum.
+	dmax = 0.1;
 }
 
 
@@ -59,24 +60,43 @@ void Ridge::command(int narg, char **arg){
 	
 	if(narg<4) error->all(FLERR,"Ridge Method -- Illegal run command");
 
+        double time2, time1, tmp, time_loop;
+	time1 = MPI_Wtime();
+
 	nRSteps = force->numeric(FLERR,arg[0]);
 	nBSteps = force->numeric(FLERR,arg[1]);
 	epsT = force->numeric(FLERR,arg[2]);
 	epsF = force->numeric(FLERR,arg[3]);
 
+	timer->stamp(Timer::RIDGE);
+
 	PerformRidge();
+
+	time2 = MPI_Wtime();
+	time_loop = time2 - time1;
+	int nprocs;
+	MPI_Comm_size(world,&nprocs);
+	MPI_Allreduce(&time_loop,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
+	time_loop = tmp/nprocs;
+	if(comm->me==0) fprintf(screen, "Timing - Ridge method wall time = %g.\n",time_loop);
 	
 	return;
 }
 
 void Ridge::PerformRidge()
 {
+	double RLt1, RLt2;
+	double PRt1, PRt2;
         int me;
-	bool sFlag=false;
+	bool exitFlag=false;
         MPI_Comm_rank(world,&me);
 	if(me==0) OpenTLS();
 	InitAtomArrays();
-        if(LoadPositions()<0) error->all(FLERR,"Ridge Method -- Atomic positions not stored in fix_store.");
+        if(LoadPositions()<0)
+	{
+		if(me==0) fprintf(screen, "Atomic positions not stored in fix_store. Bisection method needs to find minima first.\n");
+		return;
+	}
 
 	CopyAtoms(atom->x,lAtoms);
 	CopyLatToBox(lLat);
@@ -98,43 +118,49 @@ void Ridge::PerformRidge()
 	}
 	if(me==0) fprintf(screen, "UPDATE-Asymmetry: %f\n",fabs(eTLS2-eTLS1));
 
-	for(int i=0; i<nRSteps;i++)
+	for(int i=1; i<=nRSteps;i++)
 	{
 		prevMatch = -1;
 		flipFlag = false;
+		RLt1 = MPI_Wtime();
 		for(int j=0; j < nBSteps; j++)
 		{
 			if( (j==(nBSteps - 1)) && (flipFlag) ) break;
 			BisectPositions(lAtoms, hAtoms, tAtoms);
 			CopyLatToBox(tLat);
-			if(((update->minimize->efinal-eTLS1)>0.0)&&((update->minimize->efinal-eTLS2)>0.0))
+			prevForce = ComputeForce(tAtoms);
+			if(((update->minimize->einitial-eTLS1)>0.0)&&((update->minimize->einitial-eTLS2)>0.0))
 			{
-				sFlag = CheckSaddle(tAtoms);
-				if(sFlag)
+				exitFlag = CheckSaddle(tAtoms);
+				if(exitFlag)
 				{
-					WriteTLS(eTLS1,eTLS2,update->minimize->efinal);
 					break;
 				}
 			}
 
 			ComparePositions(lAtoms, hAtoms, tAtoms);
 		}
+		RLt2 = MPI_Wtime();
+		if(comm->me==0) fprintf(screen, "Timing - Loop over bisections wall time = %g.\n",RLt2 - RLt1);
 
-		if(sFlag) break;
-		if(i==nRSteps - 1)
+		if(exitFlag) break;
+		if(i==nRSteps)
 		{
 			MinimizeForces(tAtoms);
-			if(((update->minimize->efinal-eTLS1)>0.0)&&((update->minimize->efinal-eTLS2)>0.0))
+			if(((update->minimize->einitial-eTLS1)>0.0)&&((update->minimize->einitial-eTLS2)>0.0))
 			{
-				sFlag = CheckSaddle(tAtoms);
+				exitFlag = CheckSaddle(tAtoms);
 			}
 			break;
 		}
 		if(me==0) fprintf(screen, "UPDATE-\t%i\tDoing partial relaxation.\n", i);
+		PRt1 = MPI_Wtime();
 		PartialRelax(lAtoms, hAtoms);
+		PRt2 = MPI_Wtime();
+		if(comm->me==0) fprintf(screen, "Timing - Partial Relaxation wall time = %g.\n",PRt2 - PRt1);
 	}
 
-	if(!sFlag) if(me==0) fprintf(screen, "UPDATE-Cannot find saddle.\n");
+	if(!exitFlag) if(me==0) fprintf(screen, "UPDATE-Cannot find saddle.\n");
 
 	if(atom->map_style != 0)
 	{
@@ -375,6 +401,7 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
 	int m;
 	double** atomPtr =atom->x;
 	char *oldMinStyle;
+	char **newAlpha;
 	MPI_Comm_rank(world,&me);
 	
 	std::ostringstream oss;
@@ -390,6 +417,15 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
         int n = strlen(update->minimize_style) + 1;
         oldMinStyle = new char[n];
         strcpy(oldMinStyle, update->minimize_style);
+
+	if(prevForce < dmax)
+	{
+		newAlpha = new char*[2];
+		newAlpha[0] = (char *) "dmax";
+		newAlpha[1] = new char[15];
+		ConvertDoubleToChar(newAlpha[1], prevForce);
+		update->minimize->modify_params(2,newAlpha);
+	}
 
 	char **styleArg = new char*[1];
 	styleArg[0] = (char *) "sd";
@@ -407,9 +443,16 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
         rMin->command(4, newarg);
         CopyAtoms(hAtoms,atomPtr);
 
+	if(prevForce < dmax)
+	{
+		ConvertDoubleToChar(newAlpha[1], dmax);
+		update->minimize->modify_params(2,newAlpha);
+		delete [] newAlpha;
+	}
+
         delete rMin;
 	delete [] newarg;
-	delete []styleArg;
+	delete [] styleArg;
 	delete oldMinStyle;
 	delete cRelSteps;
 
@@ -563,6 +606,15 @@ void Ridge::ConvertIntToChar(char *copy, int n)
 	return;
 }
 
+void Ridge::ConvertDoubleToChar(char *copy, double n)
+{
+        std::ostringstream oss;
+        oss << n;
+        std::string dStr = oss.str();
+        std::strcpy(copy,dStr.c_str());
+        return;
+}
+
 bool Ridge::CheckSaddle(double** pos)
 {
 	int me;
@@ -599,11 +651,17 @@ bool Ridge::CheckSaddle(double** pos)
 			if(me==0) fprintf(screen, "UPDATE-Passes Saddle Point check.\n");
 			CopyAtoms(pTLSs, pos);
 			modify->delete_compute("HessianCheck");
-			delete newarg;
+			delete [] newarg;
+			WriteTLS(eTLS1,eTLS2,update->minimize->einitial);
 			return true;
 		}
-		if(me==0) fprintf(screen, "UPDATE-Fails Saddle Point check with %d negative entries.\n", nNeg);
-		modify->delete_compute("HessianCheck");
+		else
+		{
+			if(me==0) fprintf(screen, "UPDATE-No saddle point in vicinity as there are %d negative entries.\n", nNeg);
+			modify->delete_compute("HessianCheck");
+			delete [] newarg;
+			return true;
+		}
 	}
 	delete [] newarg;
 	return false;
@@ -773,4 +831,19 @@ void Ridge::MinimizeForces(double **pos)
 
 	CopyAtoms(pos, atom->x);*/
 	return;
+}
+
+double Ridge::ComputeForce(double **pos)
+{
+        char **newarg = new char*[4];
+        newarg[0] = (char *) "0.0";
+        newarg[1] = (char *) "0.0";
+        newarg[2] = (char *) "0";
+        newarg[3] = (char *) "0";
+        Minimize* rMin = new Minimize(lmp);
+        CopyAtoms(atom->x,pos);
+        rMin->command(4, newarg);
+        delete rMin;
+	delete [] newarg;
+        return update->minimize->fnorminf_final;
 }
