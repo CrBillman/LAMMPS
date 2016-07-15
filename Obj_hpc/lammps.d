@@ -1,8 +1,8 @@
-lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
+lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stddef.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi_portable_platform.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/mpicxx.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi_portable_platform.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/mpicxx.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi.h \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/map \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/stl_tree.h \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/stl_algobase.h \
@@ -102,38 +102,38 @@ lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h 
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/ostream.tcc \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/istream \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/istream.tcc \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/constants.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/functions.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/datatype.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/exception.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/op.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/status.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/request.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/group.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/comm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/win.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/file.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/errhandler.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intracomm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/topology.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intercomm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/info.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/datatype_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/functions_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/constants.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/functions.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/datatype.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/exception.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/op.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/status.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/request.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/group.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/comm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/win.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/file.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/errhandler.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intracomm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/topology.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intercomm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/info.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/datatype_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/functions_inln.h \
  /usr/include/string.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stddef.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/request_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/comm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intracomm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/topology_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intercomm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/group_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/op_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/errhandler_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/status_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/info_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/win_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/file_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/request_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/comm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intracomm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/topology_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intercomm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/group_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/op_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/errhandler_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/status_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/info_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/win_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/file_inln.h \
  ../lammps.h ../style_angle.h ../angle_charmm.h ../angle.h ../pointers.h \
  ../lmptype.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/limits.h \
@@ -165,21 +165,21 @@ lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h 
  ../atom_vec_tri.h ../style_bond.h ../bond_fene_expand.h ../bond.h ../bond_fene.h \
  ../bond_harmonic.h ../bond_hybrid.h ../bond_morse.h ../bond_nonlinear.h \
  ../bond_quartic.h ../bond_table.h ../style_command.h ../balance.h ../bisection.h \
- ../read_dump.h ../change_box.h ../create_atoms.h ../create_bonds.h \
- ../create_box.h ../delete_atoms.h ../delete_bonds.h ../displace_atoms.h \
- ../info.h ../minimize.h ../read_data.h ../read_dump.h ../read_restart.h \
- ../replicate.h ../rerun.h ../ridge.h ../run.h ../set.h ../velocity.h \
- ../write_data.h ../write_dump.h ../write_restart.h ../style_compute.h \
- ../compute_angle_local.h ../compute.h ../compute_angmom_chunk.h \
- ../compute_bond_local.h ../compute_centro_atom.h ../compute_chunk_atom.h \
- ../compute_cluster_atom.h ../compute_cna_atom.h ../compute_com_chunk.h \
- ../compute_com.h ../compute_contact_atom.h ../compute_coord_atom.h \
- ../compute_dihedral_local.h ../compute_displace_atom.h \
- ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h \
+ ../read_dump.h ../change_box.h ../couple_elastic.h ../create_atoms.h \
+ ../create_bonds.h ../create_box.h ../delete_atoms.h ../delete_bonds.h \
+ ../displace_atoms.h ../info.h ../minimize.h ../read_data.h ../read_dump.h \
+ ../read_restart.h ../replicate.h ../rerun.h ../ridge.h ../run.h ../set.h \
+ ../velocity.h ../write_data.h ../write_dump.h ../write_restart.h \
+ ../style_compute.h ../compute_angle_local.h ../compute.h \
+ ../compute_angmom_chunk.h ../compute_bond_local.h ../compute_centro_atom.h \
+ ../compute_chunk_atom.h ../compute_cluster_atom.h ../compute_cna_atom.h \
+ ../compute_com_chunk.h ../compute_com.h ../compute_contact_atom.h \
+ ../compute_coord_atom.h ../compute_dihedral_local.h ../compute_displace_atom.h \
+ ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h ../compute_freq.h \
  ../compute_group_group.h ../compute_gyration_chunk.h ../compute_gyration.h \
- ../compute_heat_flux.h ../compute_hexorder_atom.h ../compute_improper_local.h \
- ../compute_inertia_chunk.h ../compute_ke_atom.h ../compute_ke.h \
- ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
+ ../compute_heat_flux.h ../compute_hessian.h ../compute_hexorder_atom.h \
+ ../compute_improper_local.h ../compute_inertia_chunk.h ../compute_ke_atom.h \
+ ../compute_ke.h ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
  ../compute_orientorder_atom.h ../compute_pair.h ../compute_pair_local.h \
  ../compute_pe_atom.h ../compute_pe.h ../compute_pressure.h \
  ../compute_property_atom.h ../compute_property_chunk.h \
@@ -209,10 +209,10 @@ lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h 
  ../fix_read_restart.h ../fix_recenter.h ../fix_respa.h ../fix_restrain.h \
  ../fix_setforce.h ../fix_shear_history.h ../my_page.h ../fix_spring.h \
  ../fix_spring_rg.h ../fix_spring_self.h ../fix_store_force.h ../fix_store.h \
- ../fix_store_state.h ../fix_temp_berendsen.h ../fix_temp_csld.h \
- ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h \
- ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall.h \
- ../fix_wall_lj1043.h ../fix_wall_lj126.h ../fix_wall_lj93.h \
+ ../fix_store_lat.h ../fix_store_state.h ../fix_temp_berendsen.h \
+ ../fix_temp_csld.h ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h \
+ ../fix_tune_kspace.h ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h \
+ ../fix_wall.h ../fix_wall_lj1043.h ../fix_wall_lj126.h ../fix_wall_lj93.h \
  ../fix_wall_reflect.h ../fix_wall_region.h ../style_improper.h \
  ../improper_cvff.h ../improper.h ../improper_harmonic.h ../improper_hybrid.h \
  ../improper_umbrella.h ../style_integrate.h ../respa.h ../integrate.h \
@@ -317,18 +317,19 @@ lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h 
  ../fix_press_berendsen.h ../fix_print.h ../fix_property_atom.h ../fix_qeq_comb.h \
  ../fix_read_restart.h ../fix_recenter.h ../fix_respa.h ../fix_restrain.h \
  ../fix_setforce.h ../fix_shear_history.h ../fix_spring.h ../fix_spring_rg.h \
- ../fix_spring_self.h ../fix_store_force.h ../fix_store.h ../fix_store_state.h \
- ../fix_temp_berendsen.h ../fix_temp_csld.h ../fix_temp_csvr.h \
- ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h ../fix_vector.h \
- ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall_lj1043.h ../fix_wall_lj126.h \
- ../fix_wall_lj93.h ../fix_wall_reflect.h ../fix_wall_region.h ../style_compute.h \
- ../compute_angle_local.h ../compute_angmom_chunk.h ../compute_bond_local.h \
- ../compute_centro_atom.h ../compute_chunk_atom.h ../compute_cluster_atom.h \
- ../compute_cna_atom.h ../compute_com_chunk.h ../compute_com.h \
- ../compute_contact_atom.h ../compute_coord_atom.h ../compute_dihedral_local.h \
- ../compute_displace_atom.h ../compute_erotate_sphere_atom.h \
- ../compute_erotate_sphere.h ../compute_group_group.h ../compute_gyration_chunk.h \
- ../compute_gyration.h ../compute_heat_flux.h ../compute_hexorder_atom.h \
+ ../fix_spring_self.h ../fix_store_force.h ../fix_store.h ../fix_store_lat.h \
+ ../fix_store_state.h ../fix_temp_berendsen.h ../fix_temp_csld.h \
+ ../fix_temp_csvr.h ../fix_temp_rescale.h ../fix_tmd.h ../fix_tune_kspace.h \
+ ../fix_vector.h ../fix_viscous.h ../fix_wall_harmonic.h ../fix_wall_lj1043.h \
+ ../fix_wall_lj126.h ../fix_wall_lj93.h ../fix_wall_reflect.h \
+ ../fix_wall_region.h ../style_compute.h ../compute_angle_local.h \
+ ../compute_angmom_chunk.h ../compute_bond_local.h ../compute_centro_atom.h \
+ ../compute_chunk_atom.h ../compute_cluster_atom.h ../compute_cna_atom.h \
+ ../compute_com_chunk.h ../compute_com.h ../compute_contact_atom.h \
+ ../compute_coord_atom.h ../compute_dihedral_local.h ../compute_displace_atom.h \
+ ../compute_erotate_sphere_atom.h ../compute_erotate_sphere.h ../compute_freq.h \
+ ../compute_group_group.h ../compute_gyration_chunk.h ../compute_gyration.h \
+ ../compute_heat_flux.h ../compute_hessian.h ../compute_hexorder_atom.h \
  ../compute_improper_local.h ../compute_inertia_chunk.h ../compute_ke_atom.h \
  ../compute_ke.h ../compute_msd_chunk.h ../compute_msd.h ../compute_omega_chunk.h \
  ../compute_orientorder_atom.h ../compute_pair.h ../compute_pair_local.h \
@@ -344,8 +345,9 @@ lammps.o: ../lammps.cpp /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h 
  ../region_intersect.h ../region_plane.h ../region_prism.h ../region_sphere.h \
  ../region_union.h ../style_dump.h ../dump_atom.h ../dump_cfg.h ../dump_custom.h \
  ../dump_dcd.h ../dump_image.h ../dump_local.h ../dump_movie.h ../dump_xyz.h \
- ../style_command.h ../balance.h ../bisection.h ../change_box.h ../create_atoms.h \
- ../create_bonds.h ../create_box.h ../delete_atoms.h ../delete_bonds.h \
- ../displace_atoms.h ../info.h ../minimize.h ../read_data.h ../read_dump.h \
- ../read_restart.h ../replicate.h ../rerun.h ../ridge.h ../run.h ../set.h \
- ../velocity.h ../write_data.h ../write_dump.h ../write_restart.h
+ ../style_command.h ../balance.h ../bisection.h ../change_box.h \
+ ../couple_elastic.h ../create_atoms.h ../create_bonds.h ../create_box.h \
+ ../delete_atoms.h ../delete_bonds.h ../displace_atoms.h ../info.h ../minimize.h \
+ ../read_data.h ../read_dump.h ../read_restart.h ../replicate.h ../rerun.h \
+ ../ridge.h ../run.h ../set.h ../velocity.h ../write_data.h ../write_dump.h \
+ ../write_restart.h

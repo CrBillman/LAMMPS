@@ -200,6 +200,7 @@ int MinLineSearch::linemin_backtrack(double eoriginal, double &alpha)
       for (i = 0; i < n; i++) fdothme += fatom[i]*hatom[i];
     }
   MPI_Allreduce(&fdothme,&fdothall,1,MPI_DOUBLE,MPI_SUM,world);
+
   if (nextra_global)
     for (i = 0; i < nextra_global; i++) fdothall += fextra[i]*hextra[i];
   if (output->thermo->normflag) fdothall /= atom->natoms;
@@ -266,6 +267,7 @@ int MinLineSearch::linemin_backtrack(double eoriginal, double &alpha)
 
     de_ideal = -BACKTRACK_SLOPE*alpha*fdothall;
     de = ecurrent - eoriginal;
+
     if (de <= de_ideal) {
       if (nextra_global) {
         int itmp = modify->min_reset_ref();
