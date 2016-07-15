@@ -36,11 +36,13 @@ private:
 	int inputSetFlag;
 	double nMRelSteps;
 	double epsT;
-        double** lAtoms;
-        double** hAtoms;
-        double** tAtoms;
-	double* lat1;
-	double* lat2;
+        double **lAtoms;
+        double **hAtoms;
+        double **tAtoms;
+	double **m1Atoms, **m2Atoms;
+	double *lat1;
+	double *lat2;
+	double *tLat;
 
 	int ConvertToChar(char **, std::string);
 	int UpdateDumpArgs(bigint, char*);
@@ -48,6 +50,7 @@ private:
 	double ComputeDistance(double**,double**);
 	void BisectionFromMD(bigint, char*);
 	void CopyBoxToLat(double *);
+	void CopyLatToLat(double *, double *);
 	void WriteTLS(bigint, double**, double**, double, double);
 	void OpenTLS();
 	void TestMinimize(bigint, ReadDump*, int, char**);

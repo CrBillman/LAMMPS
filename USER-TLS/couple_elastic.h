@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-/*--Coded by Jonathan Trinastic, University of Florida 1/21/2016--------- */
+/*--Coded by Jonathan Trinastic, University of Florida 6/30/2016--------- */
 
 #ifdef COMMAND_CLASS
 
@@ -35,14 +35,11 @@ namespace LAMMPS_NS {
     void allocate(int nStrain);
    
   protected:
-    //char *config1name, *config2name; // configuration names
     FILE * of1; // output file of raw data
     FILE * of2; // output file of final data for internal friction
     FILE * of3; // output file of elastic constants
     char *fitType; // type of function fitting
     double eps; // max scaled strain percent
-    double **oTLS; // TLS minimum config
-    double **oLat; // original lattice prior to strains
     double **strainTLS; // stores lattice vector from each strain
     double ***energyTLS; // stores energy min vs strain for each TLS
     double ****stressTLS; // stores stress tensor for each TLS/strain
@@ -50,23 +47,17 @@ namespace LAMMPS_NS {
     double *cc; // coupling constants for each strain direction
     double ***ec; // elastic constants for each TLS
     double **em; // elastic moduli for each TLS
-    int pair_compute_flag; // 0 if pair->compute is skipped
-    int kspace_compute_flag; // 0 if kspace->compute is skipped
-    int pflag;
 
     class Compute *pressure;
 
     int LoadPositions(char * num); // load Fix_Store positions
     void InitPressCompute(); // Create pressure compute
     void ApplyStrain(char *dir, char *strain); // apply strain
-    void UndoStrain(double ** lattice); // return to pre-strain box
     double CallMinimize(); // call minimize command
     void CalcStressTensor(); // calculate pressure elements
     void FitLinearCC(int strain, double ** xInput, double ** yInput, double * gamma); // linear cc fitting
     void FitLinearEC(int strain, double ** xInput, double **** yInput, double *** elastic); // linear cc fitting
     void CalcElasticMod(double *** InputEC, double ** OutputEM); // elastic moduli calculation
-    void CopyBoxToLat(double ** latArray);
-    void CopyLatToBox(double ** latArray);
     void CopyAtoms(double** copyArray, double** templateArray);
     void MappedCopyAtoms(double** copyArray, double** templateArray);
     void ConvertDoubleToChar(double doubleInput, char * charOutput);

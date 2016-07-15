@@ -749,7 +749,6 @@ int MinLineSearch::linemin_forcezero(double eoriginal, double &alpha)
     ecurrent = engCurr;
 
     // compute the new directional derivative and also f_dot_f
-
     fhCurr = compute_dir_deriv(ffCurr);
 
     // energy change

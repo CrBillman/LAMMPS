@@ -106,7 +106,7 @@ ridge.o: ../ridge.cpp /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/bits/mathdef.h /usr/include/bits/wordsize.h \
  /usr/include/bits/mathcalls.h /usr/include/bits/mathcalls.h \
  /usr/include/bits/mathcalls.h /usr/include/bits/mathinline.h \
- /usr/include/bits/wordsize.h /usr/include/c++/4.3/bits/cmath.tcc ../run.h \
+ /usr/include/bits/wordsize.h /usr/include/c++/4.3/bits/cmath.tcc ../comm.h \
  ../pointers.h ../lmptype.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/limits.h \
  /usr/lib64/gcc/x86_64-suse-linux/4.3/include-fixed/limits.h \
@@ -119,11 +119,12 @@ ridge.o: ../ridge.cpp /usr/include/stdlib.h /usr/include/features.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stdint.h \
  /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
  /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../lammps.h ../domain.h \
- /opt/intel/composer_xe_2015.1.133/compiler/include/math.h ../update.h ../force.h \
- /usr/include/c++/4.3/map /usr/include/c++/4.3/bits/stl_tree.h \
- /usr/include/c++/4.3/bits/stl_map.h /usr/include/c++/4.3/bits/stl_multimap.h \
- ../integrate.h ../modify.h ../output.h ../finish.h ../input.h ../timer.h \
- ../error.h ../bisection.h ../read_dump.h ../read_dump.h ../write_dump.h \
- ../memory.h ../min.h ../minimize.h ../atom.h ../fix.h ../fix_store.h ../ridge.h \
- ../irregular.h /usr/include/c++/4.3/iostream ../compute.h ../compute_freq.h
+ /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../lammps.h ../run.h \
+ ../domain.h /opt/intel/composer_xe_2015.1.133/compiler/include/math.h \
+ ../update.h ../force.h /usr/include/c++/4.3/map \
+ /usr/include/c++/4.3/bits/stl_tree.h /usr/include/c++/4.3/bits/stl_map.h \
+ /usr/include/c++/4.3/bits/stl_multimap.h ../integrate.h ../modify.h ../output.h \
+ ../finish.h ../input.h ../timer.h ../error.h ../bisection.h ../read_dump.h \
+ ../read_dump.h ../write_dump.h ../memory.h ../min.h ../minimize.h ../atom.h \
+ ../fix.h ../fix_store.h ../fix_store_lat.h ../ridge.h ../irregular.h \
+ /usr/include/c++/4.3/iostream ../compute.h ../compute_freq.h
