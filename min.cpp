@@ -584,7 +584,6 @@ double Min::AuxiliaryPotential()
     }
     modForce = 0.5 * modForce;
     MPI_Allreduce(&modForce,&auxPotential,1,MPI_DOUBLE,MPI_SUM,world);
-    if(comm->me==0) fprintf(screen, "modForce is %g, 2nd atom position is %f, and the force on it is %g\n", auxPotential, atom->x[1][0],forcePtr[1][0]);
     return auxPotential;
 }
 

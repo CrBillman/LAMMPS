@@ -200,13 +200,6 @@ int MinLineSearch::linemin_backtrack(double eoriginal, double &alpha)
       for (i = 0; i < n; i++) fdothme += fatom[i]*hatom[i];
     }
   MPI_Allreduce(&fdothme,&fdothall,1,MPI_DOUBLE,MPI_SUM,world);
-//Billman - Remove
-	//if(comm->me ==0)
-	//{
-	// for (int i = 0; i < nvec; i++) fprintf(screen, "The %dth value of fvec is %g, and h is %g.\n", i, fvec[i], h[i]);
-	//}
-	//fprintf(screen, "The value of fdothall is %g.\n", fdothall);
-//End Billman
 
   if (nextra_global)
     for (i = 0; i < nextra_global; i++) fdothall += fextra[i]*hextra[i];
@@ -274,8 +267,6 @@ int MinLineSearch::linemin_backtrack(double eoriginal, double &alpha)
 
     de_ideal = -BACKTRACK_SLOPE*alpha*fdothall;
     de = ecurrent - eoriginal;
-
-    if(comm->me == 0) fprintf(screen, "eoriginal is %g.  At alpha =%g, the de is %g and the de_ideal is %g.\n", eoriginal, alpha, de, de_ideal);
 
     if (de <= de_ideal) {
       if (nextra_global) {
@@ -493,8 +484,6 @@ int MinLineSearch::linemin_quadratic(double eoriginal, double &alpha)
 
     de_ideal = -BACKTRACK_SLOPE*alpha*fdothall;
     de = ecurrent - eoriginal;
-
-    if(comm->me == 0) fprintf(screen, "The de is %g and the de_ideal is %g.\n", de, de_ideal);
 
     if (de <= de_ideal) {
       if (nextra_global) {
