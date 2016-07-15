@@ -1,6 +1,7 @@
 #include "balance.h"
 #include "bisection.h"
 #include "change_box.h"
+#include "couple_elastic.h"
 #include "create_atoms.h"
 #include "create_bonds.h"
 #include "create_box.h"

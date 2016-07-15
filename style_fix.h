@@ -51,6 +51,7 @@
 #include "fix_spring_self.h"
 #include "fix_store_force.h"
 #include "fix_store.h"
+#include "fix_store_lat.h"
 #include "fix_store_state.h"
 #include "fix_temp_berendsen.h"
 #include "fix_temp_csld.h"

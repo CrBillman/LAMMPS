@@ -14,7 +14,7 @@ DEPFLAGS =	-M
 
 LINK =		mpicxx
 LINKFLAGS =	-O
-LIB =           -lstdc++
+LIB =           -lstdc++ -lmkl_intel_lp64 -lmkl_core -lmkl_sequential
 SIZE =		size
 
 ARCHIVE =	ar
@@ -29,7 +29,7 @@ SHLIBFLAGS =	-shared
 # LAMMPS ifdef settings
 # see possible settings in Section 2.2 (step 4) of manual
 
-LMP_INC =	
+LMP_INC =	-I$(HPC_MKL_INC)
 
 # MPI library
 # see discussion in Section 2.2 (step 5) of manual

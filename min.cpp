@@ -68,6 +68,8 @@ Min::Min(LAMMPS *lmp) : Pointers(lmp)
   requestor = NULL;
 
   external_force_clear = 0;
+
+  forceObjective = false;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -287,11 +289,16 @@ void Min::setup()
 
   // stats for initial thermo output
 
-  ecurrent = pe_compute->compute_scalar();
+  if(forceObjective) ecurrent = AuxiliaryPotential();
+  else ecurrent = pe_compute->compute_scalar();
   if (nextra_global) ecurrent += modify->min_energy(fextra);
   if (output->thermo->normflag) ecurrent /= atom->natoms;
 
-  einitial = ecurrent;
+  if(forceObjective) {
+    einitial = pe_compute->compute_scalar();
+    if (nextra_global) einitial += modify->min_energy(fextra);
+    if (output->thermo->normflag) einitial /= atom->natoms;
+  } else  einitial = ecurrent;
   fnorm2_init = sqrt(fnorm_sqr());
   fnorminf_init = fnorm_inf();
 }
@@ -366,7 +373,8 @@ void Min::setup_minimal(int flag)
 
   // stats for Finish to print
 
-  ecurrent = pe_compute->compute_scalar();
+  if(forceObjective) ecurrent = AuxiliaryPotential();
+  else ecurrent = pe_compute->compute_scalar();
   if (nextra_global) ecurrent += modify->min_energy(fextra);
   if (output->thermo->normflag) ecurrent /= atom->natoms;
 
@@ -425,7 +433,11 @@ void Min::cleanup()
 
   // stats for Finish to print
 
-  efinal = ecurrent;
+  if(forceObjective) {
+    efinal = pe_compute->compute_scalar();
+    if (nextra_global) efinal += modify->min_energy(fextra);
+    if (output->thermo->normflag) efinal /= atom->natoms;
+  } else  efinal = ecurrent;
   fnorm2_final = sqrt(fnorm_sqr());
   fnorminf_final = fnorm_inf();
 
@@ -547,7 +559,32 @@ double Min::energy_force(int resetflag)
     reset_vectors();
   }
 
+  if(forceObjective) {
+    energy = AuxiliaryPotential();
+  }
+
   return energy;
+}
+
+/* ----------------------------------------------------------------------
+   Calculates Auxiliary Potential, E = 0.5 * |F(x)|^2
+   This facilitates finding maxima, saddle points, or inflection points.
+------------------------------------------------------------------------- */
+
+double Min::AuxiliaryPotential()
+{
+    double modForce = 0.0;
+    double auxPotential;
+    double **forcePtr = atom->f;
+    for (int i = 0; i < atom->nlocal; i++) {
+      for (int j = 0; j < domain->dimension; j++) {
+        forcePtr[i][j] = -forcePtr[i][j];
+        modForce = modForce + forcePtr[i][j] * forcePtr[i][j];
+      }
+    }
+    modForce = 0.5 * modForce;
+    MPI_Allreduce(&modForce,&auxPotential,1,MPI_DOUBLE,MPI_SUM,world);
+    return auxPotential;
 }
 
 /* ----------------------------------------------------------------------
@@ -618,6 +655,9 @@ void Min::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"forcezero") == 0) linestyle = 2;
       else error->all(FLERR,"Illegal min_modify command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"aux") == 0) {
+      forceObjective = true;
+      iarg += 1;
     } else error->all(FLERR,"Illegal min_modify command");
   }
 }

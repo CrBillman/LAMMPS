@@ -115,11 +115,11 @@ bisection.o: ../bisection.cpp /usr/include/stdlib.h /usr/include/features.h \
  /apps/compilers/gcc/5.2.0/lib/gcc/x86_64-redhat-linux-gnu/5.2.0/include/stdint.h \
  /usr/include/stdint.h /usr/include/bits/wordsize.h /usr/include/inttypes.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stdint.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/stddef.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi_portable_platform.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/mpicxx.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/mpi.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi_portable_platform.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/mpicxx.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/mpi.h \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/map \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/stl_tree.h \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/bits/stl_map.h \
@@ -133,39 +133,39 @@ bisection.o: ../bisection.cpp /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/wchar.h /usr/include/bits/stdio_lim.h \
  /usr/include/bits/sys_errlist.h \
  /apps/compilers/gcc/5.2.0/include/c++/5.2.0/iostream \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/constants.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/functions.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/datatype.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/exception.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/op.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/status.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/request.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/group.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/comm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/win.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/file.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/errhandler.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intracomm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/topology.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intercomm.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/info.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/datatype_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/functions_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/request_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/comm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intracomm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/topology_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/intercomm_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/group_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/op_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/errhandler_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/status_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/info_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/win_inln.h \
- /apps/mpi/intel/2016.0.109/openmpi/1.10.2/include/openmpi/ompi/mpi/cxx/file_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/constants.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/functions.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/datatype.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/exception.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/op.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/status.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/request.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/group.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/comm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/win.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/file.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/errhandler.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intracomm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/topology.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intercomm.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/info.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/datatype_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/functions_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/request_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/comm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intracomm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/topology_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/intercomm_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/group_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/op_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/errhandler_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/status_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/info_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/win_inln.h \
+ /apps/mpi/intel/2016.0.109/openmpi/1.10.3a1/include/openmpi/ompi/mpi/cxx/file_inln.h \
  ../lammps.h ../domain.h \
  /apps/compilers/intel/2016/compilers_and_libraries/0.109/linux/compiler/include/math.h \
  ../update.h ../force.h ../integrate.h ../modify.h ../output.h ../finish.h \
  ../input.h ../timer.h ../error.h ../bisection.h ../read_dump.h ../read_dump.h \
- ../memory.h ../min.h ../minimize.h ../atom.h ../fix.h ../fix_store.h ../dump.h \
- ../write_restart.h
+ ../memory.h ../min.h ../minimize.h ../atom.h ../fix.h ../fix_store.h \
+ ../fix_store_lat.h ../dump.h ../write_restart.h

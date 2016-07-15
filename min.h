@@ -92,6 +92,9 @@ class Min : protected Pointers {
   double *extra_max;          // max allowed change per iter for atom's var
   class Pair **requestor;     // Pair that stores/manipulates the variable
 
+  bool forceObjective;
+  double AuxiliaryPotential();
+
   int neigh_every,neigh_delay,neigh_dist_check;  // neighboring params
 
   double energy_force(int);
