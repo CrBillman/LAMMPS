@@ -221,8 +221,9 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	//Deletes readInput and atom arrays, to prevent memory leaks.
 	
 	delete bisRead;
-	delete readInput;
-	delete tLat;
+	delete [] readInput;
+	delete [] charCurrStep;
+	delete [] tLat;
 	if(me==0) fclose(fp);
 	modify->delete_fix((char *) "TLSt");
 
@@ -247,6 +248,8 @@ int Bisection::ConvertToChar(char ** charArray, std::string strInput)
 		start = stop+1;
 		charArray[nArgs] = start;
 	}
+
+	delete [] charInput;
 
 	return nArgs;
 }
@@ -286,6 +289,9 @@ double Bisection::CallMinimize()
 		}
 		else break;
 	}
+
+	delete [] newarg;
+
 	return update->minimize->efinal;
 }
 
@@ -349,6 +355,9 @@ void Bisection::OpenTLS()
 	char *charFile = new char[20];
 	std::strcpy(charFile,strFile.c_str());
 	fp = fopen(charFile,"a");
+
+	delete [] charFile;
+
 	return;
 }
 
@@ -427,6 +436,8 @@ void Bisection::InitAtomArrays()
 	{
 		tLat[i] = 0.0;
 	}
+
+	delete [] newarg;
 
 	return;
 }
