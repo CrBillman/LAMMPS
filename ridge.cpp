@@ -453,8 +453,8 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
         delete rMin;
 	delete [] newarg;
 	delete [] styleArg;
-	delete oldMinStyle;
-	delete cRelSteps;
+	delete [] oldMinStyle;
+	delete [] cRelSteps;
 
         return;
 }
@@ -593,7 +593,9 @@ double Ridge::CallMinimize()
                 }
 		else break;
 	}
+
 	delete [] newarg;
+
 	return update->minimize->efinal;
 }
 
