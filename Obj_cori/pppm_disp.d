@@ -1,7 +1,7 @@
 pppm_disp.o: ../pppm_disp.cpp \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h /usr/include/string.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h /usr/include/string.h \
  /usr/include/features.h /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs-64.h \

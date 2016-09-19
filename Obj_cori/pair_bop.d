@@ -28,9 +28,9 @@ pair_bop.o: ../pair_bop.cpp \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stddef.h \
  /usr/include/string.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stddef.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../pair_bop.h ../pair.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../pair_bop.h ../pair.h \
  ../pointers.h ../lmptype.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/limits.h \
  /usr/lib64/gcc/x86_64-suse-linux/4.3/include-fixed/limits.h \

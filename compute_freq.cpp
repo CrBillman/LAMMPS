@@ -190,6 +190,7 @@ void ComputeFreq::compute_array()
   // save as 1D array to use MPI_Allreduce and construct hessian easily
   for (int i = 1; i <= natoms; i++) {
     m = atom->map(i);
+    //std::cout << comm->me << "Got here0 " <<  i << ", " << m << std::endl;
     if (m >= 0 && m < nlocal) {
       if (mask[m] & groupbit) {
 	k = atom->tag[m] - 1;
@@ -207,29 +208,21 @@ void ComputeFreq::compute_array()
 
   // OUTER LOOP OVER ATOMS
   for (int i = 1; i <= natoms; i++) {
+    //std::cout << comm->me << "\t" << i << std::endl;
     m = atom->map(i);
+    //std::cout << comm->me << "Got here1 " <<  m << std::endl;
     if (mask[m] & groupbit) {
       hess_index1 = atom->tag[m] - 1;
-	//Billman
-	//std::cout << comm->me << ": " << hess_index1 <<std::endl;
-	//Billman
-      //MPI_Bcast (&hess_index1, 1, MPI_INT, comm->me, world);
+      //std::cout << comm->me << "Got here2" <<  std::endl;
       MPI_Bcast (&hess_index1, 1, MPI_INT, 0, world);
+      //std::cout << comm->me << "Got here3" <<  std::endl;
     
       // Obtain mass of atom i (from compute_ke.cpp)
       if (rmass) {
 	mass1 = rmass[m];
-        //Billman
-        //std::cout << comm->me << ": " << mass1 <<std::endl;
-        //Billman
-	//MPI_Bcast (&mass1, 1, MPI_DOUBLE, comm->me, world);
 	MPI_Bcast (&mass1, 1, MPI_DOUBLE, 0, world);
       } else {
 	mass1 = mass[type[m]];
-        //Billman
-        //std::cout << comm->me << ": " << mass1 <<std::endl;
-        //Billman
-	//MPI_Bcast (&mass1, 1, MPI_DOUBLE, comm->me, world);
 	MPI_Bcast (&mass1, 1, MPI_DOUBLE, 0, world);
       }
     }
@@ -237,10 +230,15 @@ void ComputeFreq::compute_array()
     // INNER LOOP OVER DIMENSION - calculate hessian within this loop
     // Add eps shift to atomic coordinate
     for (int j = 0; j < domain->dimension; j++) {
+      //std::cout << comm->me << "Got here4" <<  std::endl;
       if (mask[m] & groupbit) {
+        //std::cout << comm->me << "Got here5" <<  std::endl;
 	x1orig = x[m][j];
 	x[m][j] = x[m][j] + eps;
+	//std::cout << comm->me << "\t" << x[m][j] << std::endl;
       }
+
+      //std::cout << comm->me << "Got here6" <<  std::endl;
       
       // Force call to get forces after atomic shift
       comm->forward_comm();

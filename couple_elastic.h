@@ -53,6 +53,7 @@ namespace LAMMPS_NS {
     int pair_compute_flag; // 0 if pair->compute is skipped
     int kspace_compute_flag; // 0 if kspace->compute is skipped
     int pflag;
+    bool relaxFlag;
 
     class Compute *pressure;
 
@@ -74,6 +75,7 @@ namespace LAMMPS_NS {
     void OpenOutputFitting();
     void OpenOutputElastic();
     void force_clear(); // Clear current force array
+    void InitialRelaxation();
 
   };
  

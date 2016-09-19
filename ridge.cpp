@@ -1,10 +1,17 @@
-/*
- * ridge.cpp
- *
- *  Created on: Jan 11, 2016
- *      Author: Chris
- */
+/* ----------------------------------------------------------------------
+   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
+   http://lammps.sandia.gov, Sandia National Laboratories
+   Steve Plimpton, sjplimp@sandia.gov
 
+   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
+   certain rights in this software.  This software is distributed under
+   the GNU General Public License.
+
+   See the README file in the top-level LAMMPS directory.
+------------------------------------------------------------------------- */
+
+/* Coded by Chris Billman, University of Florida 2016---------- */
 #include <stdlib.h>
 #include <string.h>
 #include <cstring>
@@ -48,9 +55,10 @@ using namespace LAMMPS_NS;
 Ridge::Ridge(LAMMPS *lmp) : Pointers(lmp) {
 	//epsF = 25e-3;
 	nPRelSteps = 6;
-	nMRelSteps = 1000;
+	nMRelSteps = 10000;
 	maxAlphaSteps = 5;                              //The maximum number of addition minimizations to do because of the 'alpha linsearch' stopping condition.  For larger values, it helps the minimization actually move toward the true minimum.
 	dmax = 0.1;
+	nptSearch = false;
 }
 
 
@@ -68,6 +76,14 @@ void Ridge::command(int narg, char **arg){
 	epsT = force->numeric(FLERR,arg[2]);
 	epsF = force->numeric(FLERR,arg[3]);
 
+	int iarg = 4;
+        while(iarg<narg){
+                if(strcmp(arg[iarg],"NPT") ==0){
+                        nptSearch = true;
+                }
+                iarg++;
+        }
+
 	timer->stamp(Timer::RIDGE);
 
 	PerformRidge();
@@ -83,6 +99,23 @@ void Ridge::command(int narg, char **arg){
 	return;
 }
 
+/*
+PerformRidge
+(
+)
+Performs a modified version of the ridge method presented in Ionova J Phys. Chem (1993) and described in Hamdan, J Phys. Chem. (2014).
+Using a picture of two basins separated by a ridge, the ridge method is designed to find the saddle point.  The ridge method consists of two alternating steps:
+
+1. Bisecting atomic positions on either side of the ridge that separates the two basins.  This
+causes the positions to climb to the top of the ridge.
+2. Partial relaxations, of an atomic configuration on each side of the ridge.  Some of this relaxation
+will pull the configuration down the ridge, but some of the relaxation will be projected along the ridge
+toward the saddle point.
+
+The saddle point is continually checked by examining the forces.  If the saddle point is found,
+the details of the TLS are written to disk.  If not, the ridge method terminates after nRSteps.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::PerformRidge()
 {
 	double RLt1, RLt2;
@@ -98,17 +131,29 @@ void Ridge::PerformRidge()
 		return;
 	}
 
+        if(comm->me == 0)
+        {
+                for(int i=0; i < 9; i++) fprintf(screen, "For value %d, Lat 1 has value %f and Lat 2 has value %f\n", i, lat1[i], lat2[i]);
+        }
+
 	CopyAtoms(atom->x,lAtoms);
 	CopyLatToBox(lLat);
 	eTLS1 = CallMinimize();
 	CopyAtoms(pTLS1,atom->x);
 	CopyBoxToLat(lat1);
+
+	CopyLatToLat(tLat,lLat);
 	
 	CopyAtoms(atom->x,hAtoms);
 	CopyLatToBox(hLat);
 	eTLS2 = CallMinimize();
 	CopyAtoms(pTLS2,atom->x);
 	CopyBoxToLat(lat2);
+
+        if(comm->me == 0)
+        {
+                for(int i=0; i < 9; i++) fprintf(screen, "For value %d, Lat 1 has value %f and Lat 2 has value %f\n", i, lat1[i], lat2[i]);
+        }
 
 	float chDist = ComputeDistance(lAtoms,hAtoms);
 	if(chDist<epsT/3.0)
@@ -127,15 +172,11 @@ void Ridge::PerformRidge()
 		{
 			if( (j==(nBSteps - 1)) && (flipFlag) ) break;
 			BisectPositions(lAtoms, hAtoms, tAtoms);
-			CopyLatToBox(tLat);
-			prevForce = ComputeForce(tAtoms);
-			if(((update->minimize->einitial-eTLS1)>0.0)&&((update->minimize->einitial-eTLS2)>0.0))
+			prevForce = ComputeForce(tAtoms, tLat);
+			exitFlag = CheckSaddle(tAtoms);
+			if(exitFlag)
 			{
-				exitFlag = CheckSaddle(tAtoms);
-				if(exitFlag)
-				{
-					break;
-				}
+				break;
 			}
 
 			ComparePositions(lAtoms, hAtoms, tAtoms);
@@ -147,10 +188,7 @@ void Ridge::PerformRidge()
 		if(i==nRSteps)
 		{
 			MinimizeForces(tAtoms);
-			if(((update->minimize->einitial-eTLS1)>0.0)&&((update->minimize->einitial-eTLS2)>0.0))
-			{
-				exitFlag = CheckSaddle(tAtoms);
-			}
+			exitFlag = CheckSaddle(tAtoms);
 			break;
 		}
 		if(me==0) fprintf(screen, "UPDATE-\t%i\tDoing partial relaxation.\n", i);
@@ -160,7 +198,11 @@ void Ridge::PerformRidge()
 		if(comm->me==0) fprintf(screen, "Timing - Partial Relaxation wall time = %g.\n",PRt2 - PRt1);
 	}
 
-	if(!exitFlag) if(me==0) fprintf(screen, "UPDATE-Cannot find saddle.\n");
+	if(!exitFlag)
+	{
+		if(me==0) fprintf(screen, "UPDATE-Cannot find saddle.\n");
+		UnfixTLS();
+	}
 
 	if(atom->map_style != 0)
 	{
@@ -179,6 +221,17 @@ void Ridge::PerformRidge()
 	return;
 }
 
+/*
+BisectPositions
+(
+pos1 : 		points to a FixStore that contains the first set of atomic positions
+pos2 :		points to a FixStore that contains the second set of atomic positions
+posOut : 	points to a FixStore that will contain atomic positions that are bisections of pos1 and pos2 
+)
+Bisects the positions in pos1 and pos2 to get the new positions that will be stored in posOut.
+Also bisects the latice dimensions in lLat and hLat to get the new lattice dimensions for tLat.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::BisectPositions(double** pos1, double** pos2, double** posOut)
 {
 	int m;
@@ -206,14 +259,33 @@ void Ridge::BisectPositions(double** pos1, double** pos2, double** posOut)
 		}
 	}
 
-	for(int i=0;i<9;i++)
+	/*for(int i=0;i<9;i++)
 	{
 		tLat[i] = 0.5*(hLat[i]+lLat[i]);
-	}
+	}*/
 
 	return;
 }
 
+/*
+LoadPositions()
+Looks up the FixStore's and FixStoreLat's that should have been recorded by the bisection method.
+If it can't find them, returns an error, the bisection method has not finished before the ridge.
+Otherwise, loads:
+pTLS1 : 	the atomic positions for the first minimum
+pTLS2 :		the atomic positions for the second minimum
+lat1 : 		the lattice dimensions for the first minimum
+lat2 : 		the lattice dimensions for the second minimum
+It also creates a FixStore and FixStoreLat for the saddle point:
+pTLSs : 	the atomic positions for the saddle point
+latS : 		the lattice dimensions for the saddle point
+Finally, it initializes:
+lAtoms = pTLS1
+lLat = lat1
+hAtoms = pTLS2
+hLat = lat2
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 int Ridge::LoadPositions()
 {
 	int me;
@@ -280,50 +352,16 @@ int Ridge::LoadPositions()
 	return 0;
 }
 
-void Ridge::ReadPositions()
-{
-	char** readInput = new char*[4+domain->dimension];
-	int ni = -1;
-        readInput[ni++] = (char *) "TLS1.dump";
-        readInput[ni++] = (char *) "0";
-        readInput[ni++] = (char *) "x";
-	if(domain->dimension>=2) readInput[ni++] = (char *) "y";
-	if(domain->dimension>=3) readInput[ni++] = (char *) "z";
-        readInput[ni++] = (char *) "replace";
-	readInput[ni++] = (char *) "yes";
-	ReadDump *bisRead = new ReadDump(lmp);
-        bisRead->command(ni, readInput);	
-        CopyAtoms(pTLS1, atom->x);
-
-	readInput[0] = (char *) "TLS2.dump";
-        bisRead->command(ni, readInput);
-        CopyAtoms(pTLS2, atom->x);
-	delete bisRead;
-	delete [] readInput;
-        
-        return;
-}
-
-double** Ridge::InitAtomArray()
-{
-        double** atomArray = new double*[atom->natoms];
-        for(int i=0; i<atom->natoms; i++)
-        {
-                atomArray[i] = new double[domain->dimension];
-
-        }
-        return atomArray;
-}
-
-void Ridge::DeleteAtomArray(double** atomArray)
-{
-        for(int i=0; i<atom->natoms; i++)
-        {
-                delete atomArray[i];
-        }
-        delete atomArray;
-}
-
+/*
+CopyAtoms
+(
+copyArray : 		points to a FixStore that contains atomic positions, to be updated
+templateArray : 	points to a FixStore that contains atomic positions, to be copied
+)
+Copies the atomic positions from templateArray to copyArray.  Built to work across parallelization,
+so only nlocal entries are updated in copyArray.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::CopyAtoms(double** copyArray, double** templateArray)
 {
         int me;
@@ -340,6 +378,12 @@ void Ridge::CopyAtoms(double** copyArray, double** templateArray)
 	return;
 }
 
+/*
+OpenTLS()
+Opens the TLS.dump file, where the details of the discovered TLS will be written, and stores 
+it in fp.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::OpenTLS()
 {
         std::string strFile = "TLS.dump";
@@ -351,13 +395,36 @@ void Ridge::OpenTLS()
         return;
 }
 
+/*
+WriteTLS
+(
+E1 :            Contains the energy of the first minimum
+E2 :            Contains the energy of the second minimum
+E3 :		Contains the energy of the saddle point
+)
+This function writes out the results of the TLS search.  First, it writes the
+
+Asymmetry	Barrier Height	Barrier 1	Barrier 2	Relaxation Time
+
+to TLS.dump.  Then, it writes out the atomic positions and lattice dimensions for the 
+first minimum (timestep 0), the second minimum (timestep 1), and the saddle point (timestep 2) 
+to TLS.pos.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::WriteTLS(double E1, double E2, double E3)
 {
         double Asym = fabs(E2 - E1);
 	double Barrier= 0.5*((E3-E1)+(E3-E2));
+	double relTime = 0.0;
+	double dist = 0.0;
 	int me;
 	MPI_Comm_rank(world,&me);
-        if(me==0) fprintf(fp, "%f\t%f\t%f\t%f\n", Asym, Barrier, E3 - E1, E3 - E2);
+
+	//modify->delete_compute("HessianCheck");
+	relTime = ComputeRelaxationTime();
+
+	dist = ComputeDistance(pTLS1,pTLS2);
+        if(me==0) fprintf(fp, "%f\t%f\t%f\t%f\t%f\t%f\n", Asym, Barrier, dist, E3 - E1, E3 - E2, relTime);
 
 	char** dumparg = new char*[8];
         dumparg[0] = (char *) "all";
@@ -392,7 +459,20 @@ void Ridge::WriteTLS(double E1, double E2, double E3)
         return;
 }
 
-
+/*
+PartialRelax
+(
+lAtoms :          Points to a FixStore that contains atomic positions for the configuration below the ridge
+hAtoms :          Points to a FixStore that contains atomic positions for the configuration above the ridge
+)
+This function partially relaxes the atomic configurations determined to be above and below
+the ridge.  The number of steps used in the relaxation is determined by nPRelSteps.
+There is extra functionality contained here to try to improve the ridge method.  It's important
+that the relaxation is not too big, or it will move the configurations too far from the saddle point.
+For this reason, the partial relaxation is set to use steepest descent, and tries to decrease
+dmax based on how small the force is (Because small steps are desired if close to the saddle point).
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
 {       
         char** newarg = new char*[4];
@@ -403,16 +483,15 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
 	char *oldMinStyle;
 	char **newAlpha;
 	MPI_Comm_rank(world,&me);
-	
-	std::ostringstream oss;
-        oss << nPRelSteps;
-        std::string sRelSteps = oss.str();
-        std::strcpy(cRelSteps,sRelSteps.c_str());
+
+	ConvertIntToChar(cRelSteps,nPRelSteps);
 
         newarg[0] = (char *) "0.0";
         newarg[1] = (char *) "1.0e-6";
         newarg[2] = cRelSteps;
         newarg[3] = (char *) "1000";
+	char **brArg;
+	char **frArg;
 
         int n = strlen(update->minimize_style) + 1;
         oldMinStyle = new char[n];
@@ -431,17 +510,48 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
 	styleArg[0] = (char *) "sd";
 	update->create_minimize(1, styleArg);
 
+        /*if(nptSearch)
+        //if(0)
+        {
+                brArg = new char*[7];
+                brArg[0] = (char *) "SearchBoxRelax";
+                brArg[1] = (char *) "all";
+                brArg[2] = (char *) "box/relax";
+                brArg[3] = (char *) "aniso";
+                brArg[4] = (char *) "0.0";
+                brArg[5] = (char *) "vmax";
+                brArg[6] = (char *) "0.001";
+
+                frArg = new char*[6];
+                frArg[0] = (char *) "SearchFreeze";
+                frArg[1] = (char *) "all";
+                frArg[2] = (char *) "setforce";
+                frArg[3] = (char *) "0.0";
+                frArg[4] = (char *) "0.0";
+                frArg[5] = (char *) "0.0";
+
+		modify->add_fix(7, brArg, 1);
+	}*/
+
+
 	Minimize* rMin = new Minimize(lmp);
 	CopyAtoms(atomPtr,lAtoms);
+	CopyLatToBox(lLat);
         rMin->command(4, newarg);
+	delete rMin;
 	CopyAtoms(lAtoms,atomPtr);
+	CopyBoxToLat(lLat);
 
-	styleArg[0] = oldMinStyle;
-	update->create_minimize(1, styleArg);
-
+	rMin = new Minimize(lmp);
         CopyAtoms(atomPtr,hAtoms);
+	CopyLatToBox(hLat);
         rMin->command(4, newarg);
+	delete rMin;
         CopyAtoms(hAtoms,atomPtr);
+	//CopyBoxToLat(hLat);
+
+        styleArg[0] = oldMinStyle;
+        update->create_minimize(1, styleArg);
 
 	if(prevForce < dmax)
 	{
@@ -450,15 +560,41 @@ void Ridge::PartialRelax(double** lAtoms, double** hAtoms)
 		delete [] newAlpha;
 	}
 
-        delete rMin;
 	delete [] newarg;
 	delete [] styleArg;
 	delete [] oldMinStyle;
 	delete [] cRelSteps;
+	if(nptSearch)
+	{
+		modify->delete_fix(brArg[0]);
+		delete [] brArg;
+		delete [] frArg;
+	}
 
         return;
 }
 
+/*
+ComparePositions
+(
+lAtoms :          Points to a FixStore that contains atomic positions for the configuration below the ridge
+hAtoms :          Points to a FixStore that contains atomic positions for the configuration above the ridge
+tAtoms : 	  Points to a FixStore that contains atomic positions for the working config
+)
+The PEL is thought to be composed of many different basins.  When searching for a TLS, we need to
+be able to tell if a configuration is within the same basin as different minimized configuration.
+This function takes in the working configuration, and compares it to two minima.  If at least one
+minimum has a distance below some criteria (epsT), the working configuration is determined to be
+in the same basin as the minimum with the smallest computed distance.
+After this determination has been made, the working configuration is determined to be either above
+or below the ridge.  Then, either lAtoms or hAtoms is updated with the values in tAtoms according
+to where the working configuration is determined to be.
+If neither minimum has a distance below the criteria, the working configuration is found to be
+in a new basin.  In this case, the hessian is computed to determine if the relaxation of the
+working configuration is in a new minimum.  If it is determined to be in a minmum, the second
+minimum for the TLS is replaced with the new minimum, and hAtoms is replaced by tAtoms.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 {
 	double lDistDiff, hDistDiff, mDistDiff;
@@ -476,19 +612,26 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 	lDistDiff = ComputeDistance(atom->x, pTLS1);
 	hDistDiff = ComputeDistance(atom->x, pTLS2);
 	mDistDiff = ComputeDistance(pTLS1, pTLS2);
+	float latDist = 0.0;
+        if(comm->me == 0)
+        {
+                for(int i=0; i < 9; i++) latDist = latDist + (lLat[i] - hLat[i]) * (lLat[i] - hLat[i]);
+        }
 	if((lDistDiff<epsT) && (lDistDiff<hDistDiff))
 	{
 		CopyAtoms(lAtoms,tAtoms);
 		CopyLatToLat(lLat, tLat);
 		currMatch = 1;
-		if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): V1 = %f, V2 = %f, force = %f \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce);
+		if(me==0)  fprintf(screen, "UPDATE-Match L (%f, %f, %f): V1 = %f, V2 = %f, force = %f, RLat1 = %f, RLat2 = %f, latDist = %f \n", 
+			lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce, hLat[3], lLat[3], latDist);
 	}
 	else if(hDistDiff<epsT)
 	{
 		CopyAtoms(hAtoms,tAtoms);
 		CopyLatToLat(hLat, tLat);
 		currMatch = 2;
-		if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): V1 = %f, V2 = %f, force = %f \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce);
+		if(me==0)  fprintf(screen, "UPDATE-Match U (%f, %f, %f): V1 = %f, V2 = %f, force = %f, RLat1 = %f, RLat2 = %f, latDist = %f \n", 
+			lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce, hLat[3], lLat[3], latDist);
 	}
 	else
 	{
@@ -499,11 +642,13 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 			CopyAtoms(pTLS2, atom->x);
 			CopyBoxToLat(lat2);
 			eTLS2 = tEnergy;
-			if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f): V1 = %f, V2 = %f, force = %f.  Replaced Min 2. \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce);
+			if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f): V1 = %f, V2 = %f, force = %f, RLat1 = %f, RLat2 = %f, latDist = %f.  Replaced Min 2. \n", 
+				lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce, hLat[3], lLat[3], latDist);
 		}
 		else
 		{
-			if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f): V1 = %f, V2 = %f, force = %f.  Did not replace Min 2. \n", lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce);
+			if(me==0)  fprintf(screen, "UPDATE-Match N (%f, %f, %f): V1 = %f, V2 = %f, force = %f, RLat1 = %f, RLat2 = %f, latDist = %f.  Did not replace Min 2. \n", 
+				lDistDiff, hDistDiff, mDistDiff, tEnergy - eTLS1, tEnergy - eTLS2, prevForce, hLat[3], lLat[3], latDist);
 		}
 	}
 
@@ -513,7 +658,15 @@ void Ridge::ComparePositions(double** lAtoms, double** hAtoms, double** tAtoms)
 	return;
 }
 
-//Calculates the difference between two minima.  Now, it finds the mass-weighted distance between vectors.
+/*
+ConvertDoubleToChar
+(
+pos1 :          Points to a FixStore that contains atomic positions
+pos2 :          Points to a FixStore that contains atomic positions
+)
+Calculates the difference between two atomic configurations using the mass-weighted distance.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 double Ridge::ComputeDistance(double** pos1, double** pos2)
 {
         double dist = 0.0;
@@ -558,10 +711,39 @@ double Ridge::ComputeDistance(double** pos1, double** pos2)
         return finMassDist[0]/finMassDist[1];
 }
 
+double Ridge::ComputeDistance(double** pos1, double** pos2, double** l1, double** l2)
+{
+        double dist = 0.0;
+        double atomDist;
+        double diff;
+        double mTot = 0.0;
+        double distCriteria = 0.00;
+        double* m = atom->mass;
+        int* type = atom->type;
+        int me;
+        MPI_Comm_rank(world,&me);
+
+        double commMassDist  [2]= {dist,mTot};
+        double finMassDist [2];
+        MPI_Allreduce(commMassDist,finMassDist,2,MPI_DOUBLE,MPI_SUM,world);
+        if(finMassDist[1]<1e-6) return 0.0;
+        return finMassDist[0]/finMassDist[1];
+}
+
+/*
+CallMinimize()
+Interfaces with the minimize command.  This function has extra tools to handle some complications
+with relaxing an amorphous system.  Commonly, the relaxation will terminate with a problem with
+the alpha linesearch.  This prevents the minimization from truly finding the minimum.  However,
+this problem is stochastic.  So, resubmitting the job will help the minimizer find the true minimum.
+This function also can handle running out of minimization steps or force iterations by increasing
+the maximum number of steps in these cases.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 double Ridge::CallMinimize()
 {
 	int Steps = nMRelSteps;
-	int maxLoops = 10;
+	int maxLoops = 20;
 	int me;
 	int alphaCounter = 0;
 	char cSteps[10];
@@ -574,31 +756,93 @@ double Ridge::CallMinimize()
         newarg[2] = cSteps;
 	ConvertIntToChar(cFSteps,10*Steps);
         newarg[3] = cFSteps;
-	for(int i = 0; i < maxLoops; i++)
-	{
-		Minimize* rMin = new Minimize(lmp);
-		rMin->command(4, newarg);
-		delete rMin;
-		if(update->minimize->stop_condition<2)
-		{
-			if(me==0) fprintf(screen, "Minimization did not converge, increasing max steps to %d and max force iterations to %d.\n", Steps, Steps*5);
-			Steps = Steps * 5;
-			ConvertIntToChar(cFSteps,Steps);
-			ConvertIntToChar(cFSteps,10*Steps);
-		}
-                else if((update->minimize->stop_condition==5)&&(alphaCounter<maxAlphaSteps))
+        if(nptSearch)
+	//if(0)
+        {
+                char **brArg = new char*[7];
+                brArg[0] = (char *) "SearchBoxRelax";
+                brArg[1] = (char *) "all";
+                brArg[2] = (char *) "box/relax";
+                brArg[3] = (char *) "aniso";
+                brArg[4] = (char *) "0.0";
+                brArg[5] = (char *) "vmax";
+                brArg[6] = (char *) "0.001";
+
+                char **frArg = new char*[6];
+                frArg[0] = (char *) "SearchFreeze";
+                frArg[1] = (char *) "all";
+                frArg[2] = (char *) "setforce";
+                frArg[3] = (char *) "0.0";
+                frArg[4] = (char *) "0.0";
+                frArg[5] = (char *) "0.0";
+
+                for(int i = 0; i < maxLoops; i++)
                 {
-                        if(me==0) fprintf(screen, "Minimization did not converge, resubmitting to handle alpha linesearch stopping condition. Counter:%d; Max:%d.\n",alphaCounter,maxAlphaSteps);
-                        alphaCounter++;
+                        Minimize* rMinAtoms = new Minimize(lmp);
+                        rMinAtoms->command(4, newarg);
+                        delete rMinAtoms;
+                        if(update->minimize->stop_condition == 3) break;
                 }
-		else break;
-	}
+		if(comm->me == 0) fprintf(screen, "BR_UPDATE- Starting Relaxation of Box\n");
+		if(comm->me == 0) fprintf(screen, "BR_UPDATE- %f\t%f\t%f\t%f\t%f\t%f\n", domain->h[0], domain->h[1], domain->h[2], domain->h[3], domain->h[4], domain->h[5]);
+                for(int i = 0; i < maxLoops; i++)
+                {
+			if(comm->me == 0) fprintf(screen, "BR_UPDATE- BR %d\n", i);
+			if(comm->me == 0) fprintf(screen, "BR_UPDATE- %f\t%f\t%f\t%f\t%f\t%f\n", domain->h[0], domain->h[1], domain->h[2], domain->h[3], domain->h[4], domain->h[5]);
+                        modify->add_fix(6, frArg, 1);
+                        modify->add_fix(7, brArg, 1);
+                        Minimize* rMinBox = new Minimize(lmp);
+                        rMinBox->command(4, newarg);
+                        delete rMinBox;
 
-	delete [] newarg;
+                        modify->delete_fix(brArg[0]);
+                        modify->delete_fix(frArg[0]);
+                        if(comm->me == 0) fprintf(screen, "BR_UPDATE- AR %d\n", i);
+			if(comm->me == 0) fprintf(screen, "BR_UPDATE- %f\t%f\t%f\t%f\t%f\t%f\n", domain->h[0], domain->h[1], domain->h[2], domain->h[3], domain->h[4], domain->h[5]);
+                        Minimize* rMinAtoms = new Minimize(lmp);
+                        rMinAtoms->command(4, newarg);
+                        delete rMinAtoms;
+                        if(update->minimize->stop_condition == 3) break;
+                }
+                if(comm->me == 0) fprintf(screen, "Xlo is now %f\n",  domain->boxlo[0]);
+        }
+        else
+        {
+                for(int i = 0; i < maxLoops; i++)
+                {
+                        Minimize* rMin = new Minimize(lmp);
+                        rMin->command(4, newarg);
+                        delete rMin;
+                        if(update->minimize->stop_condition<2)
+                        {
+                                if(me==0) fprintf(screen, "Minimization did not converge, increasing max steps to %d and max force iterations to %d.\n", Steps, Steps*10);
+                                Steps = Steps * 5;
+                                ConvertIntToChar(cFSteps,Steps);
+                                ConvertIntToChar(cFSteps,10*Steps);
+                        }
+                        else if((update->minimize->stop_condition==5)&&(alphaCounter<maxAlphaSteps))
+                        {
+                                if(me==0) fprintf(screen, "Minimization did not converge, resubmitting to handle alpha linesearch stopping condition. Counter:%d; Max:%d.\n",alphaCounter,maxAlphaSteps);
+                                alphaCounter++;
+                        }
+                        else break;
+                }
+        }
 
-	return update->minimize->efinal;
+        delete [] newarg;
+
+        return update->minimize->efinal;
 }
 
+/*
+ConvertIntegerToChar
+(
+copy :          The char array that will be filled with the double
+n :             The integer to be copied into the char array
+)
+This copies an integer into a char array using a string stream.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::ConvertIntToChar(char *copy, int n)
 {
         std::ostringstream oss;
@@ -608,6 +852,15 @@ void Ridge::ConvertIntToChar(char *copy, int n)
 	return;
 }
 
+/*
+ConvertDoubleToChar
+(
+copy : 		The char array that will be filled with the double
+n : 		The double to be copied into the char array
+)
+This copies a double into a char array using a string stream.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::ConvertDoubleToChar(char *copy, double n)
 {
         std::ostringstream oss;
@@ -617,10 +870,21 @@ void Ridge::ConvertDoubleToChar(char *copy, double n)
         return;
 }
 
+/*
+CheckSaddle
+(
+pos : 		points to FixStore that contains the atomic configuration to be checked
+)
+This determines whether the input atomic configuration is at a saddle point.  First, the forces
+at the configuration are checked.  If they are below the force criteria, the eigenfrequencies
+are computed for the position.  If only one eigenfrequency is negative, the configuration passes
+the saddle test.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 bool Ridge::CheckSaddle(double** pos)
 {
 	int me;
-	float eps = 1e-6;
+	float eps = 1e-8;
 	MPI_Comm_rank(world,&me);
 	if(me==0) fprintf(screen, "Checking Saddle.\n");
         char **newarg = new char*[4];
@@ -644,23 +908,33 @@ bool Ridge::CheckSaddle(double** pos)
 		int ndof = 3*atom->natoms;
 		for(int i = 0; i < ndof; i++)
 		{
-			//for(int j =0; j < ndof; j++) if(me==0) std::cout << hessian->array[i][j] << std::endl;
 			if(hessian->array[i][0]>eps) nPos++;
 			else if(hessian->array[i][0]<(-eps)) nNeg++;
 		}
 		if(nNeg == 1)
 		{
-			if(me==0) fprintf(screen, "UPDATE-Passes Saddle Point check.\n");
-			CopyAtoms(pTLSs, pos);
-			modify->delete_compute("HessianCheck");
-			delete [] newarg;
-			WriteTLS(eTLS1,eTLS2,update->minimize->einitial);
-			return true;
+			if(((update->minimize->einitial-eTLS1)>0.0)&&((update->minimize->einitial-eTLS2)>0.0))
+			{
+				if(me==0) fprintf(screen, "UPDATE-Passes Saddle Point check.\n");
+				CopyAtoms(pTLSs, pos);
+				delete [] newarg;
+				WriteTLS(eTLS1,eTLS2,update->minimize->einitial);
+				return true;
+			}
+			else
+			{
+				if(me==0) fprintf(screen, "UPDATE-Passes Saddle Point check, but barrier height from at least one side is negative.\n");
+				modify->delete_compute("HessianCheck");
+				UnfixTLS();
+				delete [] newarg;
+				return true;
+			}
 		}
 		else
 		{
 			if(me==0) fprintf(screen, "UPDATE-No saddle point in vicinity as there are %d negative entries.\n", nNeg);
 			modify->delete_compute("HessianCheck");
+			UnfixTLS();
 			delete [] newarg;
 			return true;
 		}
@@ -669,6 +943,12 @@ bool Ridge::CheckSaddle(double** pos)
 	return false;
 }
 
+/*
+CheckMinimum()
+Uses a Hessian compute to run through the eigenfrequencies to check for a minimum.  If there are
+no negative eigenfrequencies, the current configuration passes the minimum test.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 bool Ridge::CheckMinimum()
 {
 	int nNeg = 0;
@@ -689,9 +969,15 @@ bool Ridge::CheckMinimum()
 	return false;
 }
 
+/*
+CopyBoxToLat()
+Creates a compute of calculate the eigenfrequencies from the Hessian.  It then returns the index
+for the compute.  If there is already a compute called 'HessianCheck, it returns the index
+for it without creating a new one.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 int Ridge::InitHessianCompute()
 { 
-	// Create hessian compute
 	char **newarg = new char*[5];
 	newarg[0] = (char *) "HessianCheck";
 	newarg[1] = (char *) "all";
@@ -705,7 +991,20 @@ int Ridge::InitHessianCompute()
 	return iSaddleCheck;
 }
 
-
+/*
+InitAtomArrays
+(
+)
+Creates several objects that are used throughout the ridge method.  After this method is finished,
+the following objects will be created:
+lAtoms :	        Points to a FixStore that contains atomic positions for the configuration below the ridge
+hAtoms :        	Points to a FixStore that contains atomic positions for the configuration above the ridge
+tAtoms :		points to FixStore that contains the atomic positions of the working config
+lLat : 			array that contains the simulation box dimensions for the first minimum
+hLat : 			array that contains the simulation box dimensions for the second minimum
+tLat : 			array that contains the simulation box dimensions for the working config
+*/
+//////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::InitAtomArrays()
 {
         char **newarg = new char*[5];
@@ -754,6 +1053,12 @@ void Ridge::InitAtomArrays()
         return;
 }
 
+/*
+UpdateMapping()
+Ensures that atoms remain within the boundaries of the simulation cell.  I think this is not
+necessary, but better safe than sorry.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::UpdateMapping()
 {
 
@@ -768,9 +1073,17 @@ void Ridge::UpdateMapping()
 	return;
 }
 
+/*
+CopyBoxToLat
+(
+latVector:      array[9], stores xlo xhi ylo yhi zlo zhi xy xz yz. to be updated
+)
+Copies the simulation box to the latVector.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::CopyBoxToLat(double *latVector)
 {
-        latVector[0] = domain->boxlo[0];
+/*        latVector[0] = domain->boxlo[0];
         latVector[1] = domain->boxlo[1];
         latVector[2] = domain->boxlo[2];
         latVector[3] = domain->boxhi[0];
@@ -778,13 +1091,31 @@ void Ridge::CopyBoxToLat(double *latVector)
         latVector[5] = domain->boxhi[2];
         latVector[6] = domain->xy;
         latVector[7] = domain->xz;
+        latVector[8] = domain->yz;*/
+        latVector[0] = domain->boxlo_bound[0];
+        latVector[1] = domain->boxlo_bound[1];
+        latVector[2] = domain->boxlo_bound[2];
+        latVector[3] = domain->boxhi_bound[0];
+        latVector[4] = domain->boxhi_bound[1];
+        latVector[5] = domain->boxhi_bound[2];
+        latVector[6] = domain->xy;
+        latVector[7] = domain->xz;
         latVector[8] = domain->yz;
         return;
 }
 
+/*
+CopyLatToBox
+(
+latVector:      array[9], stores xlo xhi ylo yhi zlo zhi xy xz yz. to be copied
+)
+Copies the values of an input lattice array to the simulation box.  Then updates the global
+parameters for the system and ensures that the mapping is updated..
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::CopyLatToBox(double *latVector)
 {
-        domain->boxlo[0] = latVector[0];
+/*        domain->boxlo[0] = latVector[0];
 	domain->boxlo[1] = latVector[1];
         domain->boxlo[2] = latVector[2];
         domain->boxhi[0] = latVector[3];
@@ -792,7 +1123,17 @@ void Ridge::CopyLatToBox(double *latVector)
 	domain->boxhi[2] = latVector[5];
 	domain->xy = latVector[6];
 	domain->xz = latVector[7];
-	domain->yz = latVector[8];
+	domain->yz = latVector[8];*/
+
+        domain->boxlo_bound[0] = latVector[0];
+        domain->boxlo_bound[1] = latVector[1];
+        domain->boxlo_bound[2] = latVector[2];
+        domain->boxhi_bound[0] = latVector[3];
+        domain->boxhi_bound[1] = latVector[4];
+        domain->boxhi_bound[2] = latVector[5];
+        domain->xy = latVector[6];
+        domain->xz = latVector[7];
+        domain->yz = latVector[8];
 
 	ResetBox();
 	UpdateMapping();
@@ -800,6 +1141,15 @@ void Ridge::CopyLatToBox(double *latVector)
         return;
 }
 
+/*
+CopyLatToLat
+(
+copyArray:	array[9], stores xlo xhi ylo yhi zlo zhi xy xz yz. to be copied
+templateArray:	array[9], stores xlo xhi ylo yhi zlo zhi xy xz yz. to be updated
+)
+Copies the values of an input lattice array to another one.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::CopyLatToLat(double *copyArray, double *templateArray)
 {
 	for(int i=0; i<9; i++)
@@ -809,6 +1159,11 @@ void Ridge::CopyLatToLat(double *copyArray, double *templateArray)
 	return;
 }
 
+/*
+ResetBox()
+Resetting the box ensures that all parameters are updated after changing the lattice.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::ResetBox()
 {
 	domain->set_initial_box();
@@ -816,26 +1171,25 @@ void Ridge::ResetBox()
 	domain->set_local_box();
 }
 
+/*
+MinimizeForces
+(
+pos:	a pointer to a FixStore object, which stores an atom array that is automatically updated
+	with respect to the parallelization across processors.
+)
+This method adjusts the atomic configuration in order to more precisely locate the saddle point.
+The ridge method often struggles to get the force below a reasonable threshold, so using another
+method when the forces are already small can speed up the TLS search.
+Currently, this isn't working.  The goal is the finish implementing the auxiliary potential
+(Where the objective function is changed to 0.5*|F(x)|^2), and use this here.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Ridge::MinimizeForces(double **pos)
 {
-	/*if(comm->me==0) fprintf(screen, "UPDATE- Attempting to use forcezero to find saddle point.\n");
-	CopyAtoms(atom->x,pos);
-	char **minArg = new char*[2];
-	minArg[0] = (char *) "line";
-	minArg[1] = (char *) "forcezero";
-	update->minimize->modify_params(2,minArg);
-	CallMinimize();
-
-	minArg[1] = (char *) "quadratic";
-	update->minimize->modify_params(2,minArg);
-	delete minArg;
-	prevForce = update->minimize->fnorminf_final;
-
-	CopyAtoms(pos, atom->x);*/
 	return;
 }
 
-double Ridge::ComputeForce(double **pos)
+double Ridge::ComputeForce(double **pos, double *lat)
 {
         char **newarg = new char*[4];
         newarg[0] = (char *) "0.0";
@@ -843,9 +1197,69 @@ double Ridge::ComputeForce(double **pos)
         newarg[2] = (char *) "0";
         newarg[3] = (char *) "0";
         Minimize* rMin = new Minimize(lmp);
+	CopyLatToBox(lat);
         CopyAtoms(atom->x,pos);
         rMin->command(4, newarg);
         delete rMin;
 	delete [] newarg;
         return update->minimize->fnorminf_final;
 }
+
+/*
+Compute relaxation time, according to Hamdan J Phys Chem (2014).  Calculated by
+
+\tau_0^{-1}=\frac{\prod^{3N}_{i=1}v_i^0}{\prod^{3N-1}_{i=1}v_i^s}e^{\frac{S}{k_b}}
+
+This method initializes a hessian compute.  Then it loads the the first minimum and 
+lattice, and calculates the hessian.  Then, it takes the product of all of the eigenfrequencies.  
+These are assumed to already follow the rule that all are positive except for 3 which correspond
+to the symmetries of the system (so, if the mimimum or saddle points are not true extrema,
+this method will not work).  This process is repeated for the saddle point.  Then, the ratio is 
+taken and returned.
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////
+double Ridge::ComputeRelaxationTime()
+{
+        double relTime = 0.0;
+        double eps = 1e-6;
+
+        int iSaddleCheck = modify->find_compute("HessianCheck");
+        Compute *hessian = modify->compute[iSaddleCheck];
+        //This needs to be done logarithmically, so that the product will be the sum of the logarithms.  At the end, we exponentiate to get the relaxation time.
+        double saddleProduct = 0.0;
+        int dof = domain->dimension * atom->natoms;
+        for(int i = 0; i < dof; i++)
+        {
+                if(hessian->array[i][0]>eps) saddleProduct = saddleProduct + log(hessian->array[i][0]);
+        }
+        modify->delete_compute("HessianCheck");
+
+        ComputeForce(pTLS1, lat1);
+
+        iSaddleCheck = InitHessianCompute();
+        hessian = modify->compute[iSaddleCheck];
+        hessian->compute_array();
+        double minProduct = 0.0;
+        for(int i = 0; i < dof; i++)
+        {
+                if(hessian->array[i][0]>eps) minProduct = minProduct + log(hessian->array[i][0]);
+        }
+
+        if(comm->me == 0) fprintf(screen, "minProduct is %f, saddleProduct is %f\n", minProduct, saddleProduct);
+	//Divide by 2 (because the eigenvalues are the frequency squared) and exponentiate to get the relaxation time.
+        relTime = exp((minProduct - saddleProduct)/2.0);
+	//This converts into picoseconds, if the units chosen are metal.
+	relTime = 1.0/relTime;
+
+        modify->delete_compute("HessianCheck");
+        return relTime;
+}
+
+void Ridge::UnfixTLS()
+{
+	modify->delete_fix((char *) "TLS1");
+	modify->delete_fix((char *) "TLS2");
+	modify->delete_fix((char *) "TLSs");
+	return;
+}
+

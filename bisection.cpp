@@ -1,9 +1,17 @@
-/*
- * bisection.cpp
- *
- *  Created on: Jan 11, 2016
- *      Author: Chris
- */
+/* ----------------------------------------------------------------------
+   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
+   http://lammps.sandia.gov, Sandia National Laboratories
+   Steve Plimpton, sjplimp@sandia.gov
+
+   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
+   certain rights in this software.  This software is distributed under
+   the GNU General Public License.
+
+   See the README file in the top-level LAMMPS directory.
+------------------------------------------------------------------------- */
+
+/* Coded by Chris Billman, University of Florida 2016---------- */
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +19,7 @@
 #include <sstream>
 #include <cmath>
 #include "run.h"
+#include "comm.h"
 #include "domain.h"
 #include "update.h"
 #include "force.h"
@@ -43,9 +52,10 @@ using namespace LAMMPS_NS;
 
 Bisection::Bisection(LAMMPS *lmp) : Pointers(lmp)
 {
-        nMRelSteps = 1000;     				//The number of relaxation steps to start with for CallMinimize()
+        nMRelSteps = 10000;     				//The number of relaxation steps to start with for CallMinimize()
 	maxAlphaSteps = 5;    				//The maximum number of addition minimizations to do because of the 'alpha linsearch' stopping condition.  For larger values, it helps the minimization actually move toward the true minimum.
         matchExit = true;                               //Determines whether or not to exit if the end-points of the trajectory relax to the same minimum
+	nptSearch = false;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -57,20 +67,29 @@ void Bisection::command(int narg, char **arg)
 	bigint nsteps_input = force->bnumeric(FLERR,arg[0]);	//The number of steps in the input trajectory
 	epsT = force->numeric(FLERR,arg[1]);			//Tolerance for the distance criteria for defining different minima
 
-	inputSetFlag = 0;					
+	inputSetFlag = 0;
+	bool fromMD = false;
+	char* bisFilename;
 	int iarg=2;
+	if(comm->me == 0) fprintf(screen, "Parsing bisection input\n");
 	while(iarg<narg){
+		if(comm->me == 0) fprintf(screen, "%s\n", arg[iarg]);
 		if(strcmp(arg[iarg],"FMD") == 0){
 		    if (iarg+1 > narg) error->all(FLERR,"Illegal run command");
-			char* bisFilename = arg[iarg+1];
-			BisectionFromMD(nsteps_input, bisFilename);
+			bisFilename = arg[iarg+1];
+			fromMD = true;
 			inputSetFlag = 1;
 			iarg++;
+		}
+		if(strcmp(arg[iarg],"NPT") == 0){
+			nptSearch = true;
+			if(comm->me == 0) fprintf(screen, "At the beginning, nptSearch is %s", nptSearch ? "true" : "false");
 		}
 		iarg++;
 	}
 
 	if(inputSetFlag==0) error->all(FLERR,"Bisection Method -- No input method selected");
+	BisectionFromMD(nsteps_input, bisFilename);
 	
 	return;
 
@@ -113,7 +132,7 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	}
 	else
 	{
-                readInput = new char*[7];
+                readInput = new char*[9];
                 readInput[0] = (char *) bisFilename;
                 readInput[1] = (char *) "0";
                 readInput[2] = (char *) "x";
@@ -121,7 +140,9 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 		readInput[4] = (char *) "z";
                 readInput[5] = (char *) "replace";
                 readInput[6] = (char *) "yes";
-		nInput = 7;
+                readInput[7] = (char *) "box";
+                readInput[8] = (char *) "yes";
+		nInput = 9;
 	}
 
 	//Get a mapping, to handle per-atom arrays.
@@ -218,6 +239,11 @@ void Bisection::BisectionFromMD(bigint nsteps, char* bisFilename){
 	eDiff = fabs(hEnergyMin-lEnergyMin);
 	WriteTLS(intCurrStep,m1Atoms,m2Atoms,lEnergyMin,hEnergyMin);
 
+	if(comm->me == 0)
+	{
+		for(int i=0; i < 9; i++) fprintf(screen, "For value %d, Lat 1 has value %f and Lat 2 has value %f\n", i, lat1[i], lat2[i]);
+	}
+
 	//Deletes readInput and atom arrays, to prevent memory leaks.
 	
 	delete bisRead;
@@ -270,24 +296,63 @@ double Bisection::CallMinimize()
         newarg[2] = cSteps;
         ConvertIntToChar(cFSteps,10*Steps);
         newarg[3] = cFSteps;
-        for(int i = 0; i < maxLoops; i++)
-        {       
-                Minimize* rMin = new Minimize(lmp);
-                rMin->command(4, newarg);
-                delete rMin;
-                if(update->minimize->stop_condition<2)
-                {       
-                        if(me==0) fprintf(screen, "Minimization did not converge, increasing max steps to %d and max force iterations to %d.\n", Steps, Steps*10);
-                        Steps = Steps * 5;
-                        ConvertIntToChar(cFSteps,Steps);
-                        ConvertIntToChar(cFSteps,10*Steps);
-                }
-		else if((update->minimize->stop_condition==5)&&(alphaCounter<maxAlphaSteps))
+	if(comm->me == 0) fprintf(screen, "nptSearch is %s", nptSearch ? "true" : "false");
+	if(nptSearch)
+	{
+		char **brArg = new char*[5];
+		//brArg[0] = (char *) "fix";
+		brArg[0] = (char *) "SearchBoxRelax";
+		brArg[1] = (char *) "all";
+		brArg[2] = (char *) "box/relax";
+		brArg[3] = (char *) "aniso";
+		brArg[4] = (char *) "0.0";
+		char **frArg = new char*[6];
+		//frArg[0] = (char *) "fix";
+		frArg[0] = (char *) "SearchFreeze";
+		frArg[1] = (char *) "all";
+		frArg[2] = (char *) "setforce";
+		frArg[3] = (char *) "0.0";
+		frArg[4] = (char *) "0.0";
+		frArg[5] = (char *) "0.0";
+		for(int i = 0; i < maxLoops; i++)
 		{
-                        if(me==0) fprintf(screen, "Minimization did not converge, resubmitting to handle alpha linesearch stopping condition. Counter:%d; Max:%d.\n",alphaCounter,maxAlphaSteps);
-			alphaCounter++;
+			Minimize* rMinAtoms = new Minimize(lmp);
+			rMinAtoms->command(4, newarg);
+			delete rMinAtoms;
+
+			modify->add_fix(6, frArg, 1);
+			modify->add_fix(5, brArg, 1);
+                        Minimize* rMinBox = new Minimize(lmp);
+                        rMinBox->command(4, newarg);
+                        delete rMinBox;
+
+			modify->delete_fix(brArg[0]);
+			modify->delete_fix(frArg[0]);
+			if(update->minimize->stop_condition == 3) break;
 		}
-		else break;
+		if(comm->me == 0) fprintf(screen, "Xlo is now %f\n",  domain->boxlo[0]);
+	}
+	else
+	{
+		for(int i = 0; i < maxLoops; i++)
+		{       
+			Minimize* rMin = new Minimize(lmp);
+			rMin->command(4, newarg);
+			delete rMin;
+			if(update->minimize->stop_condition<2)
+			{       
+				if(me==0) fprintf(screen, "Minimization did not converge, increasing max steps to %d and max force iterations to %d.\n", Steps, Steps*10);
+				Steps = Steps * 5;
+				ConvertIntToChar(cFSteps,Steps);
+				ConvertIntToChar(cFSteps,10*Steps);
+			}
+			else if((update->minimize->stop_condition==5)&&(alphaCounter<maxAlphaSteps))
+			{
+				if(me==0) fprintf(screen, "Minimization did not converge, resubmitting to handle alpha linesearch stopping condition. Counter:%d; Max:%d.\n",alphaCounter,maxAlphaSteps);
+				alphaCounter++;
+			}
+			else break;
+		}
 	}
 
 	delete [] newarg;
@@ -475,6 +540,10 @@ void Bisection::CopyBoxToLat(double *latVector)
 	latVector[6] = domain->xy;
 	latVector[7] = domain->xz;
 	latVector[8] = domain->yz;
+        if(comm->me == 0)
+        {
+                for(int i=0; i < 9; i++) fprintf(screen, "Updating lattice.  For entry %d, lattice has value %f\n", i, latVector[i]);
+        }
 	return;
 }
 

@@ -1,7 +1,7 @@
 remap_wrap.o: ../remap_wrap.cpp \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../remap_wrap.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../remap_wrap.h \
  ../pointers.h ../lmptype.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/limits.h \
  /usr/lib64/gcc/x86_64-suse-linux/4.3/include-fixed/limits.h \

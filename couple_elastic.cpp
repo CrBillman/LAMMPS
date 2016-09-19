@@ -50,6 +50,7 @@
 #include "math.h"
 #include "fix_store.h"
 #include "fix_store_state.h"
+#include "fix_store_lat.h"
 #include "change_box.h"
 #include "thermo.h"
 #include "compute.h"
@@ -83,7 +84,7 @@ void CoupleElastic::command(int narg, char **arg)
   /* read in all input parameters: */
 
   // code currently looks for exactly two parameters
-  if (narg != 2) error->all(FLERR,"Illegal couple_elastic command");
+  if (narg < 2) error->all(FLERR,"Illegal couple_elastic command");
 
   // code requires simulation box to apply strain
   if (domain->box_exist == 0)
@@ -99,6 +100,10 @@ void CoupleElastic::command(int narg, char **arg)
   fitType = new char[n]; /* fitting type: linear is only current option */
   strcpy(fitType,arg[1]);
 
+  relaxFlag = false;
+  if(narg ==3) relaxFlag = true;
+
+
   /* initialize arrays and values */
   oTLS = NULL;
   oLat = NULL;
@@ -112,6 +117,8 @@ void CoupleElastic::command(int narg, char **arg)
   char * strainDir;
   char * numTLS;
   int numStrain = 3; /* number of strain intervals in one direction */
+  numTLS = "1";
+  if( LoadPositions(numTLS) ) return;
 
   allocate(numStrain); /* allocate memory for arrays */
 
@@ -138,7 +145,9 @@ void CoupleElastic::command(int narg, char **arg)
 
   /* Initialize pressure compute to use later */
   InitPressCompute();
-
+  double dNumStrain = double(numStrain);
+  double strainMag;
+  char * chStrainMag = new char[10];
   /* Outer loop over each minimum configuration of TLS */
   // Must do one at a time to load positions correctly
   for (int i = 0; i < 2; i++)
@@ -148,18 +157,15 @@ void CoupleElastic::command(int narg, char **arg)
       if (i == 1){numTLS = "2";}
 
       // Load atomic positions of TLS
-      LoadPositions(numTLS);
+      if( LoadPositions(numTLS) ) return;
+
+      if( relaxFlag) InitialRelaxation();
 
       // Load box parameters
       /* TO DO */
         
       // Store lattice of current TLS
-      CopyBoxToLat(oLat);  
-
-      std::cout << "Lattice: " << std::endl;
-      std::cout << oLat[0][0] << " " << oLat[0][1] << " " << oLat[0][2] << std::endl;
-      std::cout << oLat[1][0] << " " << oLat[1][1] << " " << oLat[1][2] << std::endl;
-      std::cout << oLat[2][0] << " " << oLat[2][1] << " " << oLat[2][2] << std::endl;
+      //CopyBoxToLat(oLat);  
 
       // Apply strain and calculate changes in energy and stress tensor
       for (int j =0; j < 6; j++)
@@ -177,16 +183,11 @@ void CoupleElastic::command(int narg, char **arg)
 	      // Load original TLS positions
 	      LoadPositions(numTLS);
 
-	      std::cout << "Lattice: " << std::endl;
-	      std::cout << oLat[0][0] << " " << oLat[0][1] << " " << oLat[0][2] << std::endl;
-	      std::cout << oLat[1][0] << " " << oLat[1][1] << " " << oLat[1][2] << std::endl;
-	      std::cout << oLat[2][0] << " " << oLat[2][1] << " " << oLat[2][2] << std::endl;
-
 	      // Calculate strain amount for given interval step
 	      // Starts from maximum negative strain, works up
-	      double dNumStrain = double(numStrain);
-	      double strainMag = (2 - eps) + k * ((eps - 1) / dNumStrain);
-	      char * chStrainMag = new char[10];
+	      //strainMag = (2 - eps) + k * ((eps - 1) / dNumStrain);
+	      strainMag = 1.0 - eps + k * eps / dNumStrain;
+	      if(comm-> me == 0) std::cout << "For k = " << k << ", applying strain of " << strainMag << std::endl;
 	      ConvertDoubleToChar(strainMag, chStrainMag);
 
 	      // Apply strain and store in strain array
@@ -320,21 +321,39 @@ int CoupleElastic::LoadPositions(char *num)
   char * TLSname = new char[l];
   strcpy(TLSname, "TLS");
   strcat(TLSname, num);
-  if(comm->me == 0)
-    {
-      std::cout << "Loading " << TLSname << std::endl;
-    }
 
   //Get the labels for the fixes for the TLS atom positions.
   int iTLS = modify->find_fix(TLSname);
+  delete [] TLSname;
 
   //If there are no corresponding fixes, returns -1 to flag the error.
   if(iTLS<0)
-    error->all(FLERR, "TLS stored state not found");
+  {
+     if(comm->me == 0) fprintf(screen, "No FixStore for %s, exitting couple_elastic\n", TLSname);
+     return 1;
+  }
 
   //Creates a fix according to the stored fix
   FixStore * TLS = (FixStore *) modify->fix[iTLS];
   CopyAtoms(x, TLS->astore);
+
+  l = strlen("TLSLat") + 1;
+  TLSname = new char[l];
+  strcpy(TLSname, "TLSLat");
+  strcat(TLSname, num);
+
+  iTLS = modify->find_fix(TLSname);
+  delete []TLSname;
+
+  FixStoreLat * TLSlat = (FixStoreLat *) modify->fix[iTLS];
+
+  for(int i = 0; i < 3; i++)
+  {
+    for(int j = 0; j < 3; j++)
+    {
+      oLat[i][j] = TLSlat->vstore[ 3 * i + j];
+    }
+  }
 
   return 0;
 }
@@ -414,7 +433,7 @@ double CoupleElastic::CallMinimize()
 {
   char **newarg = new char*[4];
   newarg[0] = (char *) "0";
-  newarg[1] = (char *) "1.0e-8";
+  newarg[1] = (char *) "1.0e-6";
   newarg[2] = (char *) "10000";
   newarg[3] = (char *) "10000";
   Minimize* rMin = new Minimize(lmp);
@@ -626,6 +645,13 @@ void CoupleElastic::OpenOutputFitting()
   char *charFile = new char[20];
   std::strcpy(charFile, strFile.c_str());
   of2 = fopen(charFile, "a");
+  return;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CoupleElastic::InitialRelaxation()
+{
   return;
 }
 

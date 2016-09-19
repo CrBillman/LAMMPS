@@ -38,9 +38,9 @@ bond_nonlinear.o: ../bond_nonlinear.cpp \
  /usr/include/stdint.h /usr/include/bits/wchar.h /usr/include/bits/wordsize.h \
  /usr/include/inttypes.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stdint.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../lammps.h ../atom.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../lammps.h ../atom.h \
  ../neighbor.h ../accelerator_omp.h ../accelerator_intel.h ../domain.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/math.h ../comm.h ../force.h \
  /usr/include/c++/4.3/map /usr/include/c++/4.3/bits/stl_tree.h \

@@ -22,9 +22,9 @@ dump_movie.o: ../dump_movie.cpp /usr/include/stdio.h /usr/include/features.h \
  /usr/include/string.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stddef.h ../dump_movie.h \
  ../dump_image.h ../dump_custom.h ../dump.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../pointers.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../pointers.h \
  ../lmptype.h /opt/intel/composer_xe_2015.1.133/compiler/include/limits.h \
  /usr/lib64/gcc/x86_64-suse-linux/4.3/include-fixed/limits.h \
  /usr/include/limits.h /usr/include/bits/posix1_lim.h \

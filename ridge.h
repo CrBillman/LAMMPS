@@ -1,15 +1,17 @@
-/* -*- c++ -*- ----------------------------------------------------------
+/* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
    http://lammps.sandia.gov, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
-   Copyright (2026) Sandia Corporation.  Under the terms of Contract
+   Copyright (2003) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
+
+/* Coded by Chris Billman, University of Florida 2016---------- */
 
 #ifdef COMMAND_CLASS
 
@@ -30,6 +32,7 @@ class Ridge : protected Pointers {
 private:
 	FILE *fp;
 	bool flipFlag;
+	bool nptSearch;
         int nRSteps;
         int nBSteps;
 	int nPRelSteps;
@@ -50,7 +53,9 @@ private:
 	double** InitAtomArray();
         double CallMinimize();
         double ComputeDistance(double **,double **);
-	double ComputeForce(double **);
+	double ComputeDistance(double **,double **, double **, double **);
+	double ComputeForce(double **, double *);
+	double ComputeRelaxationTime();
 	void PerformRidge();
 	void ReadPositions();
         void CopyAtoms(double **, double **);
@@ -72,6 +77,7 @@ private:
 	void InitAtomArrays();
 	void ResetBox();
 	void MinimizeForces(double **);
+	void UnfixTLS();
 	bool CheckSaddle(double **);
 	bool CheckMinimum();
 public:

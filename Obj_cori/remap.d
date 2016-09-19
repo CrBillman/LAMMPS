@@ -19,6 +19,6 @@ remap.o: ../remap.cpp /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/pthreadtypes.h /usr/include/bits/wordsize.h \
  /usr/include/alloca.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stddef.h ../remap.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../pack.h
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../pack.h

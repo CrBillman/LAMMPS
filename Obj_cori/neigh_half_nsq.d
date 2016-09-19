@@ -11,9 +11,9 @@ neigh_half_nsq.o: ../neigh_half_nsq.cpp ../neighbor.h ../pointers.h ../lmptype.h
  /usr/include/stdint.h /usr/include/bits/wchar.h /usr/include/bits/wordsize.h \
  /usr/include/inttypes.h \
  /opt/intel/composer_xe_2015.1.133/compiler/include/stdint.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpio.h \
- /opt/cray/mpt/7.3.1/gni/mpich-intel/14.0/include/mpi.h ../lammps.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpio.h \
+ /opt/cray/mpt/7.4.1/gni/mpich-intel/15.0/include/mpi.h ../lammps.h \
  /usr/include/stdio.h /opt/intel/composer_xe_2015.1.133/compiler/include/stddef.h \
  /usr/include/bits/types.h /usr/include/bits/wordsize.h \
  /usr/include/bits/typesizes.h /usr/include/libio.h /usr/include/_G_config.h \
